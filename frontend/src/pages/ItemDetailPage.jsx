@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { ArrowLeftIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
-import { inventoryApi } from '../services/inventoryApi'
+import { inventoryApi, getMediaUrl } from '../services/inventoryApi'
 import { useAuth } from '../context/AuthContext'
 
 const documentTypes = [
@@ -50,7 +50,7 @@ export default function ItemDetailPage() {
   const fetchMovements = async () => {
     try {
       const { data } = await inventoryApi.getStockMovements({ item: id })
-      setMovements(data)
+      setMovements(data.results || data)
     } catch (error) {
       console.error('Failed to fetch movements', error)
     }
@@ -119,12 +119,21 @@ export default function ItemDetailPage() {
             {item.sku || item.part_number || 'Sin código'} · {item.category_name}
           </p>
         </div>
-        {item.is_critical && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-800">
-            <ExclamationTriangleIcon className="h-4 w-4" />
-            Stock crítico
-          </span>
-        )}
+        <div className="flex items-start gap-4">
+          {item.image_url && (
+            <img
+              src={getMediaUrl(item.image_url)}
+              alt={item.name}
+              className="h-24 w-24 rounded-lg object-cover border border-gray-200"
+            />
+          )}
+          {item.is_critical && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-800">
+              <ExclamationTriangleIcon className="h-4 w-4" />
+              Stock crítico
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

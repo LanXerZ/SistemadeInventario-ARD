@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { PlusIcon, MagnifyingGlassIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
-import { inventoryApi } from '../services/inventoryApi'
+import { inventoryApi, getMediaUrl } from '../services/inventoryApi'
 import { useAuth } from '../context/AuthContext'
 
 export default function InventoryPage() {
@@ -98,7 +98,7 @@ export default function InventoryPage() {
           onClick={fetchItems}
           className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
         >
-          Buscar
+          Filtrar
         </button>
       </div>
 
@@ -109,6 +109,9 @@ export default function InventoryPage() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Foto
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Artículo
                 </th>
@@ -134,6 +137,19 @@ export default function InventoryPage() {
             <tbody className="divide-y divide-gray-200 bg-white">
               {items.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4">
+                    {item.image_url ? (
+                      <img
+                        src={getMediaUrl(item.image_url)}
+                        alt={item.name}
+                        className="h-12 w-12 rounded-md object-cover border border-gray-200"
+                      />
+                    ) : (
+                      <div className="h-12 w-12 rounded-md bg-gray-100 flex items-center justify-center text-xs text-gray-400">
+                        Sin foto
+                      </div>
+                    )}
+                  </td>
                   <td className="px-6 py-4">
                     <Link
                       to={`/inventory/${item.id}`}
@@ -187,7 +203,7 @@ export default function InventoryPage() {
               {items.length === 0 && (
                 <tr>
                   <td
-                    colSpan={canEdit ? 6 : 5}
+                    colSpan={canEdit ? 7 : 6}
                     className="px-6 py-8 text-center text-sm text-gray-500"
                   >
                     No se encontraron artículos.

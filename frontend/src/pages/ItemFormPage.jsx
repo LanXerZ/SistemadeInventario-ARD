@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { inventoryApi } from '../services/inventoryApi'
+import { inventoryApi, getMediaUrl } from '../services/inventoryApi'
 
 const documentTypes = [
   { value: 'oficio', label: 'Oficio' },
@@ -29,6 +29,8 @@ export default function ItemFormPage() {
     unit: 'unidad',
     is_active: true,
   })
+  const [imageFile, setImageFile] = useState(null)
+  const [imagePreview, setImagePreview] = useState(null)
   const [initialStock, setInitialStock] = useState({
     quantity: 0,
     document_type: 'directo',
@@ -67,6 +69,9 @@ export default function ItemFormPage() {
         unit: data.unit,
         is_active: data.is_active,
       })
+      if (data.image_url) {
+        setImagePreview(getMediaUrl(data.image_url))
+      }
     } catch (error) {
       toast.error('Error al cargar el artículo')
       navigate('/inventory')
@@ -83,19 +88,46 @@ export default function ItemFormPage() {
     }))
   }
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error('La imagen no debe superar los 2MB')
+        e.target.value = ''
+        return
+      }
+      setImageFile(file)
+      setImagePreview(URL.createObjectURL(file))
+    }
+  }
+
   const handleStockChange = (e) => {
     const { name, value } = e.target
     setInitialStock((prev) => ({ ...prev, [name]: value }))
   }
 
+  const buildFormData = () => {
+    const data = new FormData()
+    data.append('name', formData.name)
+    data.append('sku', formData.sku || '')
+    data.append('part_number', formData.part_number || '')
+    data.append('category', formData.category)
+    data.append('description', formData.description || '')
+    data.append('application', formData.application || '')
+    data.append('location', formData.location)
+    data.append('minimum_stock', Number(formData.minimum_stock))
+    data.append('unit', formData.unit)
+    data.append('is_active', formData.is_active)
+    if (imageFile) {
+      data.append('image', imageFile)
+    }
+    return data
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
-      const payload = {
-        ...formData,
-        minimum_stock: Number(formData.minimum_stock),
-        category: Number(formData.category),
-      }
+      const payload = buildFormData()
 
       let itemId = id
       if (isEditing) {
@@ -258,6 +290,26 @@ export default function ItemFormPage() {
               rows={3}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-brand-700 focus:outline-none focus:ring-brand-700"
             />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-gray-700">Foto del activo</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="mt-1 block w-full text-sm text-gray-700 file:mr-4 file:rounded-md file:border-0 file:bg-brand-800 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-brand-900"
+            />
+            <p className="mt-1 text-xs text-gray-500">Máximo 2MB. JPG, PNG, GIF.</p>
+            {imagePreview && (
+              <div className="mt-3">
+                <img
+                  src={imagePreview}
+                  alt="Vista previa"
+                  className="h-40 w-40 rounded-lg object-cover border border-gray-200"
+                />
+              </div>
+            )}
           </div>
         </div>
 

@@ -44,6 +44,7 @@ class Item(models.Model):
     quantity = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0)])
     minimum_stock = models.PositiveIntegerField(default=0)
     unit = models.CharField(max_length=50, default='unidad')
+    image = models.ImageField(upload_to='items/%Y/%m/', blank=True, null=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.core.validators import FileExtensionValidator
 from .models import Category, Item, StockMovement
 
 
@@ -12,13 +13,14 @@ class CategorySerializer(serializers.ModelSerializer):
 class ItemListSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
     is_critical = serializers.BooleanField(read_only=True)
+    image_url = serializers.ImageField(source='image', read_only=True)
 
     class Meta:
         model = Item
         fields = [
             'id', 'name', 'sku', 'part_number', 'category', 'category_name',
             'application', 'location', 'quantity', 'minimum_stock', 'unit',
-            'is_active', 'is_critical', 'created_at', 'updated_at',
+            'image_url', 'is_active', 'is_critical', 'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
@@ -26,16 +28,27 @@ class ItemListSerializer(serializers.ModelSerializer):
 class ItemDetailSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
     is_critical = serializers.BooleanField(read_only=True)
+    image_url = serializers.ImageField(source='image', read_only=True)
 
     class Meta:
         model = Item
         fields = [
             'id', 'name', 'sku', 'part_number', 'category', 'category_name',
             'description', 'application', 'location', 'quantity',
-            'minimum_stock', 'unit', 'is_active', 'is_critical',
+            'minimum_stock', 'unit', 'image', 'image_url', 'is_active', 'is_critical',
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'quantity', 'created_at', 'updated_at']
+        extra_kwargs = {
+            'image': {'write_only': True, 'required': False},
+        }
+
+    def validate_image(self, value):
+        if value:
+            max_size = 2 * 1024 * 1024  # 2MB
+            if value.size > max_size:
+                raise serializers.ValidationError('La imagen no debe superar los 2MB.')
+        return value
 
 
 class StockMovementSerializer(serializers.ModelSerializer):

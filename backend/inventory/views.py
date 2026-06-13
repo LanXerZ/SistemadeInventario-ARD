@@ -2,7 +2,7 @@ from django.db.models import Q
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
+from django_filters.rest_framework import DjangoFilterBackend, FilterSet, NumberFilter
 from .models import Category, Item, StockMovement
 from .serializers import (
     CategorySerializer,
@@ -11,6 +11,14 @@ from .serializers import (
     StockMovementSerializer,
 )
 from .permissions import IsAlmacenistaOrAdmin
+
+
+class ItemFilter(FilterSet):
+    category = NumberFilter(field_name='category__id')
+
+    class Meta:
+        model = Item
+        fields = ['category', 'is_active']
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -23,7 +31,7 @@ class ItemViewSet(viewsets.ModelViewSet):
     queryset = Item.objects.select_related('category').all()
     permission_classes = [permissions.IsAuthenticated, IsAlmacenistaOrAdmin]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['category', 'is_active']
+    filterset_class = ItemFilter
 
     def get_serializer_class(self):
         if self.action == 'list':

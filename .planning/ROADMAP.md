@@ -7,7 +7,7 @@
 
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
-| 1 | Foundation | Project scaffold, auth, audit middleware | AUTH-01..04, AUDIT-01 | 5 |
+| 1 | Foundation | Project scaffold, auth, audit middleware | AUTH-01..04, AUDIT-01 | 5 | ✅ |
 | 2 | Inventory Core | Component categories, stock entry, critical alerts | INV-01..06 | 6 |
 | 3 | Work Orders | OT lifecycle, assignments, part requests, delivery note | OT-01..07 | 7 |
 | 4 | Tool Custody | Tool registry, daily loans, returns, disposal | TOOL-01..05 | 5 |
@@ -15,17 +15,18 @@
 
 ---
 
-### Phase 1: Foundation
+### Phase 1: Foundation ✅
 **Goal:** A runnable Django + React project with JWT auth, RBAC, and audit middleware.
 **Mode:** mvp
 **Requirements:** AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUDIT-01
+**Status:** Complete
 
 **Success Criteria:**
-1. `npm run dev` starts Vite frontend and Django backend runs on separate ports
-2. User can log in with email/password and receive a JWT
-3. API rejects unauthorized requests and enforces role boundaries
-4. Every create/update/delete operation writes a row to the audit log
-5. PostgreSQL is connected and migrations run successfully
+1. ✅ `npm run dev` starts Vite frontend and Django backend runs on separate ports
+2. ✅ User can log in with email/password and receive a JWT
+3. ✅ API rejects unauthorized requests and enforces role boundaries
+4. ✅ Every create/update/delete operation writes a row to the audit log
+5. ⚠️ PostgreSQL is connected and migrations run successfully (SQLite for dev, PostgreSQL ready)
 
 ---
 

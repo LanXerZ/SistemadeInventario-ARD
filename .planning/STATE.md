@@ -58,26 +58,25 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 - [x] Audit log UI for admin/almacenista
 - [x] Production security settings (HTTPS, HSTS, secure cookies)
 
-### Post-MVP Improvements
+### Post-MVP Improvements (Completed)
 - [x] User management UI (list, create, edit, delete users)
 - [x] PDF reports for inventory, work orders, and tools
 - [x] Excel reports for inventory, work orders, and tools
 - [x] Notification badge for pending part requests
+- [x] Global search across inventory, work orders, and tools
+- [x] Enhanced dashboard with statistics and charts
+- [x] Per-object audit history tabs
 - [x] 34 passing backend tests
 
 ## Next Steps
 
-1. Implement medium-priority UX improvements:
-   - Global search across modules
-   - Enhanced dashboard with charts/statistics
-   - Per-object audit history tabs
-2. Implement low-priority technical improvements:
+1. Implement low-priority technical improvements:
    - Frontend E2E tests
    - PostgreSQL production setup
    - Automated backups
    - API rate limiting
-3. Deploy to production
-4. User acceptance testing
+2. Deploy to production
+3. User acceptance testing
 
 ## Blockers
 
@@ -90,4 +89,4 @@ None.
 - Spec-driven development: `REQUIREMENTS.md` and `ROADMAP.md` are the source of truth for phases.
 
 ---
-*State updated: 2026-06-13 after implementing high-priority improvements*
+*State updated: 2026-06-13 after implementing medium-priority improvements*

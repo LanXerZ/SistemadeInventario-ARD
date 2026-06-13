@@ -2,7 +2,7 @@
 
 **Project:** Taller de Electrónica - Armada RD
 **Current phase:** Phase 4 — Tool Custody Module
-**Status:** In Progress
+**Status:** Complete
 
 ## Project Reference
 
@@ -10,7 +10,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 
 **Core value:** An Almacenista can account for every part and tool that enters or leaves the workshop, and a Técnico can only see and affect the work orders and part requests assigned to them.
 
-**Current focus:** Implement Tool registry, daily loans/returns, and disposal tracking.
+**Current focus:** Phase 5 — Security Hardening & Audit UI
 
 ## Completed Work
 
@@ -47,16 +47,20 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 - [x] Work order frontend pages: list, form, detail
 - [x] Technician permissions: only assigned work orders + request parts
 - [x] Printable delivery note
-- [x] 26 passing backend tests
-- [x] Sample work orders created
+- [x] Tool model with registry (code, type, brand, model, serial)
+- [x] ToolLoan model for daily loans/returns
+- [x] Tool custody API with loan/return/disposal actions
+- [x] Tool custody frontend pages: list, form, detail
+- [x] Overdue tool detection
+- [x] 34 passing backend tests
+- [x] Sample tools created
 
 ## Next Steps
 
-1. Implement Tool model with registry
-2. Build ToolLoan model for daily loans/returns
-3. Create tool custody API endpoints
-4. Create tool custody frontend pages
-5. Add overdue alerts for loaned tools
+1. Begin Phase 5 execution (Security Hardening & Audit UI)
+2. Add frontend session timeout warning/auto-logout
+3. Create Audit Log UI for admin/almacenista
+4. Verify HTTPS config and secure cookies for production
 
 ## Blockers
 
@@ -69,4 +73,4 @@ None.
 - Spec-driven development: `REQUIREMENTS.md` and `ROADMAP.md` are the source of truth for phases.
 
 ---
-*State updated: 2026-06-13 after Phase 4 start*
+*State updated: 2026-06-13 after Phase 4 completion*

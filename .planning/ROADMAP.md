@@ -10,7 +10,7 @@
 | 1 | Foundation | Project scaffold, auth, audit middleware | AUTH-01..04, AUDIT-01 | 5 | ✅ |
 | 2 | Inventory Core | Component categories, stock entry, critical alerts | INV-01..06 | 6 | ✅ |
 | 3 | Work Orders | OT lifecycle, assignments, part requests, delivery note | OT-01..07 | 7 | ✅ |
-| 4 | Tool Custody | Tool registry, daily loans, returns, disposal | TOOL-01..05 | 5 |
+| 4 | Tool Custody | Tool registry, daily loans, returns, disposal | TOOL-01..05 | 5 | ✅ |
 | 5 | Security Hardening | Session timeout, HTTPS config, audit UI, immutability | AUTH-05, AUDIT-02..04 | 4 |
 
 ---
@@ -60,17 +60,18 @@
 
 ---
 
-### Phase 4: Tool Custody
+### Phase 4: Tool Custody ✅
 **Goal:** Tool registry, daily loan/return flow, overdue alerts, and disposal.
 **Mode:** mvp
 **Requirements:** TOOL-01, TOOL-02, TOOL-03, TOOL-04, TOOL-05
+**Status:** Complete
 
 **Success Criteria:**
-1. Almacenista can register tools with code, type, brand, model, and serial
-2. Daily loan form assigns a tool to a technician at shift start
-3. Return form marks tool available again and records return time
-4. Loaned tools cannot be loaned again until returned
-5. Disposed tools remain visible in historical reports with reason and date
+1. ✅ Almacenista can register tools with code, type, brand, model, and serial
+2. ✅ Daily loan form assigns a tool to a technician at shift start
+3. ✅ Return form marks tool available again and records return time
+4. ✅ Loaned tools cannot be loaned again until returned
+5. ✅ Disposed tools remain visible in historical reports with reason and date
 
 ---
 

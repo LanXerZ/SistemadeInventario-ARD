@@ -3,10 +3,12 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from .views import dashboard_stats
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/', include('accounts.urls')),
+    path('api/v1/dashboard/stats/', dashboard_stats, name='dashboard-stats'),
     path('api/v1/inventory/', include('inventory.urls')),
     path('api/v1/work-orders/', include('workorders.urls')),
     path('api/v1/tools/', include('tools.urls')),

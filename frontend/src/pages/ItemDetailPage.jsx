@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { ArrowLeftIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { inventoryApi, getMediaUrl } from '../services/inventoryApi'
 import { useAuth } from '../context/AuthContext'
+import AuditHistoryTab from '../components/AuditHistoryTab'
 
 const documentTypes = [
   { value: 'oficio', label: 'Oficio' },
@@ -22,6 +23,7 @@ export default function ItemDetailPage() {
   const [movements, setMovements] = useState([])
   const [loading, setLoading] = useState(true)
   const [showEntryForm, setShowEntryForm] = useState(false)
+  const [activeTab, setActiveTab] = useState('movements')
   const [movementForm, setMovementForm] = useState({
     movement_type: 'entry',
     quantity: 1,
@@ -170,40 +172,69 @@ export default function ItemDetailPage() {
             </dl>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Historial de movimientos</h3>
-            {movements.length === 0 ? (
-              <p className="text-sm text-gray-500">No hay movimientos registrados.</p>
-            ) : (
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Fecha</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Tipo</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Cantidad</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Documento</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Notas</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {movements.map((movement) => (
-                    <tr key={movement.id}>
-                      <td className="px-4 py-2 text-sm text-gray-900">
-                        {new Date(movement.created_at).toLocaleString('es-DO')}
-                      </td>
-                      <td className="px-4 py-2 text-sm text-gray-900">
-                        {movement.movement_type === 'entry' ? 'Entrada' : 'Salida'}
-                      </td>
-                      <td className="px-4 py-2 text-sm text-gray-900">{movement.quantity}</td>
-                      <td className="px-4 py-2 text-sm text-gray-900">
-                        {movement.document_type} {movement.document_number}
-                      </td>
-                      <td className="px-4 py-2 text-sm text-gray-900">{movement.notes || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="border-b border-gray-200">
+              <nav className="-mb-px flex" aria-label="Tabs">
+                <button
+                  onClick={() => setActiveTab('movements')}
+                  className={`w-1/2 py-4 px-1 text-center border-b-2 text-sm font-medium ${
+                    activeTab === 'movements'
+                      ? 'border-brand-800 text-brand-800'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Movimientos
+                </button>
+                <button
+                  onClick={() => setActiveTab('audit')}
+                  className={`w-1/2 py-4 px-1 text-center border-b-2 text-sm font-medium ${
+                    activeTab === 'audit'
+                      ? 'border-brand-800 text-brand-800'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Auditoría
+                </button>
+              </nav>
+            </div>
+            <div className="p-6">
+              {activeTab === 'movements' ? (
+                movements.length === 0 ? (
+                  <p className="text-sm text-gray-500">No hay movimientos registrados.</p>
+                ) : (
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Fecha</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Tipo</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Cantidad</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Documento</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Notas</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {movements.map((movement) => (
+                        <tr key={movement.id}>
+                          <td className="px-4 py-2 text-sm text-gray-900">
+                            {new Date(movement.created_at).toLocaleString('es-DO')}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-gray-900">
+                            {movement.movement_type === 'entry' ? 'Entrada' : 'Salida'}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-gray-900">{movement.quantity}</td>
+                          <td className="px-4 py-2 text-sm text-gray-900">
+                            {movement.document_type} {movement.document_number}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-gray-900">{movement.notes || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )
+              ) : (
+                <AuditHistoryTab modelName="inventory.item" objectId={item.id} />
+              )}
+            </div>
           </div>
         </div>
 

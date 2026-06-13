@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../context/AuthContext'
 import { workOrderApi } from '../services/workOrderApi'
 import SessionTimeout from './SessionTimeout'
+import GlobalSearch from './GlobalSearch'
 
 const navigation = [
   { name: 'Inicio', href: '/', icon: HomeIcon },
@@ -99,9 +100,17 @@ export default function Layout({ children }) {
         </div>
       </aside>
 
-      <main className="flex-1 p-8 bg-gray-50 overflow-auto">
-        {children}
-      </main>
+      <div className="flex-1 flex flex-col">
+        <header className="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between">
+          <GlobalSearch />
+          <div className="text-sm text-gray-600">
+            {new Date().toLocaleDateString('es-DO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </div>
+        </header>
+        <main className="flex-1 p-8 bg-gray-50 overflow-auto">
+          {children}
+        </main>
+      </div>
     </div>
   )
 }

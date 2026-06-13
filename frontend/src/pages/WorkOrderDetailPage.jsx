@@ -5,6 +5,7 @@ import { ArrowLeftIcon, PrinterIcon } from '@heroicons/react/24/outline'
 import { workOrderApi } from '../services/workOrderApi'
 import { inventoryApi } from '../services/inventoryApi'
 import { useAuth } from '../context/AuthContext'
+import AuditHistoryTab from '../components/AuditHistoryTab'
 
 const statusColors = {
   received: 'bg-gray-100 text-gray-800',
@@ -34,6 +35,7 @@ export default function WorkOrderDetailPage() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [showRequestForm, setShowRequestForm] = useState(false)
+  const [activeTab, setActiveTab] = useState('parts')
   const [requestForm, setRequestForm] = useState({
     item: '',
     quantity: 1,
@@ -230,127 +232,158 @@ export default function WorkOrderDetailPage() {
             </dl>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Repuestos</h3>
-            {workOrder.parts.length === 0 ? (
-              <p className="text-sm text-gray-500">No hay repuestos solicitados.</p>
-            ) : (
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Artículo</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Cantidad</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Estado</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {workOrder.parts.map((part) => (
-                    <tr key={part.id}>
-                      <td className="px-4 py-2 text-sm text-gray-900">
-                        {part.item_name} <span className="text-gray-500">({part.item_sku})</span>
-                      </td>
-                      <td className="px-4 py-2 text-sm text-gray-900">
-                        {part.quantity_approved || part.quantity_requested}
-                      </td>
-                      <td className="px-4 py-2 text-sm text-gray-900">{partStatusLabels[part.status]}</td>
-                      <td className="px-4 py-2 text-sm">
-                        {part.status === 'requested' && isAdminOrAlmacenista && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="border-b border-gray-200">
+              <nav className="-mb-px flex" aria-label="Tabs">
+                <button
+                  onClick={() => setActiveTab('parts')}
+                  className={`w-1/2 py-4 px-1 text-center border-b-2 text-sm font-medium ${
+                    activeTab === 'parts'
+                      ? 'border-brand-800 text-brand-800'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Repuestos
+                </button>
+                <button
+                  onClick={() => setActiveTab('audit')}
+                  className={`w-1/2 py-4 px-1 text-center border-b-2 text-sm font-medium ${
+                    activeTab === 'audit'
+                      ? 'border-brand-800 text-brand-800'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Auditoría
+                </button>
+              </nav>
+            </div>
+            <div className="p-6">
+              {activeTab === 'parts' ? (
+                <>
+                  {workOrder.parts.length === 0 ? (
+                    <p className="text-sm text-gray-500">No hay repuestos solicitados.</p>
+                  ) : (
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Artículo</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Cantidad</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Estado</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {workOrder.parts.map((part) => (
+                          <tr key={part.id}>
+                            <td className="px-4 py-2 text-sm text-gray-900">
+                              {part.item_name} <span className="text-gray-500">({part.item_sku})</span>
+                            </td>
+                            <td className="px-4 py-2 text-sm text-gray-900">
+                              {part.quantity_approved || part.quantity_requested}
+                            </td>
+                            <td className="px-4 py-2 text-sm text-gray-900">{partStatusLabels[part.status]}</td>
+                            <td className="px-4 py-2 text-sm">
+                              {part.status === 'requested' && isAdminOrAlmacenista && (
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleApprovePart(part.id)}
+                                    className="text-green-600 hover:text-green-900"
+                                  >
+                                    Aprobar
+                                  </button>
+                                  <button
+                                    onClick={() => handleRejectPart(part.id)}
+                                    className="text-red-600 hover:text-red-900"
+                                  >
+                                    Rechazar
+                                  </button>
+                                </div>
+                              )}
+                              {part.status === 'approved' && isAdminOrAlmacenista && (
+                                <button
+                                  onClick={() => handleUsePart(part.id)}
+                                  className="text-brand-700 hover:text-brand-900"
+                                >
+                                  Consumir
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+
+                  {isTechnician && workOrder.status !== 'delivered' && workOrder.status !== 'ready' && (
+                    <div className="mt-4">
+                      {!showRequestForm ? (
+                        <button
+                          onClick={() => setShowRequestForm(true)}
+                          className="rounded-md bg-brand-800 px-4 py-2 text-sm font-medium text-white hover:bg-brand-900"
+                        >
+                          Solicitar repuesto
+                        </button>
+                      ) : (
+                        <form onSubmit={handleRequestPart} className="space-y-4 border-t border-gray-200 pt-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">Artículo</label>
+                            <select
+                              value={requestForm.item}
+                              onChange={(e) => setRequestForm({ ...requestForm, item: e.target.value })}
+                              required
+                              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                            >
+                              <option value="">Seleccione...</option>
+                              {items.map((item) => (
+                                <option key={item.id} value={item.id}>
+                                  {item.name} ({item.quantity} disponibles)
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">Cantidad</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={requestForm.quantity}
+                              onChange={(e) => setRequestForm({ ...requestForm, quantity: e.target.value })}
+                              required
+                              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">Notas</label>
+                            <input
+                              value={requestForm.notes}
+                              onChange={(e) => setRequestForm({ ...requestForm, notes: e.target.value })}
+                              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                            />
+                          </div>
                           <div className="flex gap-2">
                             <button
-                              onClick={() => handleApprovePart(part.id)}
-                              className="text-green-600 hover:text-green-900"
+                              type="submit"
+                              className="rounded-md bg-brand-800 px-4 py-2 text-sm font-medium text-white hover:bg-brand-900"
                             >
-                              Aprobar
+                              Solicitar
                             </button>
                             <button
-                              onClick={() => handleRejectPart(part.id)}
-                              className="text-red-600 hover:text-red-900"
+                              type="button"
+                              onClick={() => setShowRequestForm(false)}
+                              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                             >
-                              Rechazar
+                              Cancelar
                             </button>
                           </div>
-                        )}
-                        {part.status === 'approved' && isAdminOrAlmacenista && (
-                          <button
-                            onClick={() => handleUsePart(part.id)}
-                            className="text-brand-700 hover:text-brand-900"
-                          >
-                            Consumir
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-
-            {isTechnician && workOrder.status !== 'delivered' && workOrder.status !== 'ready' && (
-              <div className="mt-4">
-                {!showRequestForm ? (
-                  <button
-                    onClick={() => setShowRequestForm(true)}
-                    className="rounded-md bg-brand-800 px-4 py-2 text-sm font-medium text-white hover:bg-brand-900"
-                  >
-                    Solicitar repuesto
-                  </button>
-                ) : (
-                  <form onSubmit={handleRequestPart} className="space-y-4 border-t border-gray-200 pt-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Artículo</label>
-                      <select
-                        value={requestForm.item}
-                        onChange={(e) => setRequestForm({ ...requestForm, item: e.target.value })}
-                        required
-                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                      >
-                        <option value="">Seleccione...</option>
-                        {items.map((item) => (
-                          <option key={item.id} value={item.id}>
-                            {item.name} ({item.quantity} disponibles)
-                          </option>
-                        ))}
-                      </select>
+                        </form>
+                      )}
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Cantidad</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={requestForm.quantity}
-                        onChange={(e) => setRequestForm({ ...requestForm, quantity: e.target.value })}
-                        required
-                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Notas</label>
-                      <input
-                        value={requestForm.notes}
-                        onChange={(e) => setRequestForm({ ...requestForm, notes: e.target.value })}
-                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="submit"
-                        className="rounded-md bg-brand-800 px-4 py-2 text-sm font-medium text-white hover:bg-brand-900"
-                      >
-                        Solicitar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setShowRequestForm(false)}
-                        className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </div>
-            )}
+                  )}
+                </>
+              ) : (
+                <AuditHistoryTab modelName="workorders.workorder" objectId={workOrder.id} />
+              )}
+            </div>
           </div>
         </div>
 

@@ -10,6 +10,9 @@ import DashboardPage from './pages/DashboardPage'
 import WorkOrdersPage from './pages/WorkOrdersPage'
 import WorkOrderFormPage from './pages/WorkOrderFormPage'
 import WorkOrderDetailPage from './pages/WorkOrderDetailPage'
+import ToolsPage from './pages/ToolsPage'
+import ToolFormPage from './pages/ToolFormPage'
+import ToolDetailPage from './pages/ToolDetailPage'
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, loading } = useAuth()
@@ -126,7 +129,31 @@ export default function App() {
         path="/tools"
         element={
           <ProtectedRoute>
-            <Placeholder title="Herramientas" />
+            <ToolsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tools/new"
+        element={
+          <ProtectedRoute>
+            <ToolFormPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tools/:id"
+        element={
+          <ProtectedRoute>
+            <ToolDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tools/:id/edit"
+        element={
+          <ProtectedRoute>
+            <ToolFormPage />
           </ProtectedRoute>
         }
       />

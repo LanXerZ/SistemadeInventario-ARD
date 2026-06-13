@@ -1,8 +1,8 @@
 # State: Sistema de Inventario del Taller de Electrónica - Armada RD
 
 **Project:** Taller de Electrónica - Armada RD
-**Current phase:** Phase 3 — Work Orders Module
-**Status:** Complete
+**Current phase:** Phase 4 — Tool Custody Module
+**Status:** In Progress
 
 ## Project Reference
 
@@ -10,7 +10,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 
 **Core value:** An Almacenista can account for every part and tool that enters or leaves the workshop, and a Técnico can only see and affect the work orders and part requests assigned to them.
 
-**Current focus:** Phase 4 — Tool Custody Module
+**Current focus:** Implement Tool registry, daily loans/returns, and disposal tracking.
 
 ## Completed Work
 
@@ -52,9 +52,9 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 
 ## Next Steps
 
-1. Begin Phase 4 execution (Tool Custody Module)
-2. Implement Tool model with registry
-3. Build ToolLoan model for daily loans/returns
+1. Implement Tool model with registry
+2. Build ToolLoan model for daily loans/returns
+3. Create tool custody API endpoints
 4. Create tool custody frontend pages
 5. Add overdue alerts for loaned tools
 
@@ -69,4 +69,4 @@ None.
 - Spec-driven development: `REQUIREMENTS.md` and `ROADMAP.md` are the source of truth for phases.
 
 ---
-*State updated: 2026-06-13 after Phase 3 completion*
+*State updated: 2026-06-13 after Phase 4 start*

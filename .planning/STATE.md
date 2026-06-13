@@ -2,7 +2,7 @@
 
 **Project:** Taller de Electrónica - Armada RD
 **Current phase:** Phase 3 — Work Orders Module
-**Status:** In Progress
+**Status:** Complete
 
 ## Project Reference
 
@@ -10,7 +10,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 
 **Core value:** An Almacenista can account for every part and tool that enters or leaves the workshop, and a Técnico can only see and affect the work orders and part requests assigned to them.
 
-**Current focus:** Implement WorkOrder model, sequential numbering, assignments, and part requests.
+**Current focus:** Phase 4 — Tool Custody Module
 
 ## Completed Work
 
@@ -41,16 +41,22 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 - [x] Item image upload with local storage
 - [x] Image preview in inventory list and detail
 - [x] Button renamed from 'Buscar' to 'Filtrar'
-- [x] 17 passing backend tests
-- [x] Sample inventory data created
+- [x] WorkOrder model with sequential OT number generation (OT-YYYY-XXXXX)
+- [x] WorkOrderPart model for part requests/approvals/consumption
+- [x] Work order API with CRUD and custom actions
+- [x] Work order frontend pages: list, form, detail
+- [x] Technician permissions: only assigned work orders + request parts
+- [x] Printable delivery note
+- [x] 26 passing backend tests
+- [x] Sample work orders created
 
 ## Next Steps
 
-1. Implement WorkOrder model with sequential numbering
-2. Implement WorkOrderPart model for part requests
-3. Build work order API endpoints
-4. Create work order frontend pages
-5. Add printable delivery note
+1. Begin Phase 4 execution (Tool Custody Module)
+2. Implement Tool model with registry
+3. Build ToolLoan model for daily loans/returns
+4. Create tool custody frontend pages
+5. Add overdue alerts for loaned tools
 
 ## Blockers
 
@@ -63,4 +69,4 @@ None.
 - Spec-driven development: `REQUIREMENTS.md` and `ROADMAP.md` are the source of truth for phases.
 
 ---
-*State updated: 2026-06-13 after Phase 3 start*
+*State updated: 2026-06-13 after Phase 3 completion*

@@ -9,7 +9,7 @@
 |---|-------|------|--------------|------------------|
 | 1 | Foundation | Project scaffold, auth, audit middleware | AUTH-01..04, AUDIT-01 | 5 | ✅ |
 | 2 | Inventory Core | Component categories, stock entry, critical alerts | INV-01..06 | 6 | ✅ |
-| 3 | Work Orders | OT lifecycle, assignments, part requests, delivery note | OT-01..07 | 7 |
+| 3 | Work Orders | OT lifecycle, assignments, part requests, delivery note | OT-01..07 | 7 | ✅ |
 | 4 | Tool Custody | Tool registry, daily loans, returns, disposal | TOOL-01..05 | 5 |
 | 5 | Security Hardening | Session timeout, HTTPS config, audit UI, immutability | AUTH-05, AUDIT-02..04 | 4 |
 
@@ -45,17 +45,18 @@
 
 ---
 
-### Phase 3: Work Orders
+### Phase 3: Work Orders ✅
 **Goal:** OT lifecycle from intake to closure with part consumption and printable delivery note.
 **Mode:** mvp
 **Requirements:** OT-01, OT-02, OT-03, OT-04, OT-05, OT-06, OT-07
+**Status:** Complete
 
 **Success Criteria:**
-1. OT number auto-generates uniquely (e.g., OT-2026-00001)
-2. Technician sees only assigned OTs and can update repair status
-3. Technician can request parts; inventory deducts only after Almacenista approval
-4. Every consumed part is linked to an active OT
-5. Closed OT generates a printable digital delivery note
+1. ✅ OT number auto-generates uniquely (e.g., OT-2026-00001)
+2. ✅ Technician sees only assigned OTs and can update repair status
+3. ✅ Technician can request parts; inventory deducts only after Almacenista approval
+4. ✅ Every consumed part is linked to an active OT
+5. ✅ Closed OT generates a printable digital delivery note
 
 ---
 

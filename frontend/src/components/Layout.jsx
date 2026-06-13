@@ -1,0 +1,77 @@
+import React from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import {
+  HomeIcon,
+  WrenchIcon,
+  CubeIcon,
+  ClipboardDocumentListIcon,
+  UsersIcon,
+  ArrowRightOnRectangleIcon,
+} from '@heroicons/react/24/outline'
+import { useAuth } from '../context/AuthContext'
+
+const navigation = [
+  { name: 'Inicio', href: '/', icon: HomeIcon },
+  { name: 'Inventario', href: '/inventory', icon: CubeIcon },
+  { name: 'Órdenes', href: '/workorders', icon: ClipboardDocumentListIcon },
+  { name: 'Herramientas', href: '/tools', icon: WrenchIcon },
+  { name: 'Usuarios', href: '/users', icon: UsersIcon, adminOnly: true },
+]
+
+export default function Layout({ children }) {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login')
+  }
+
+  const isAdmin = user?.role === 'admin'
+
+  return (
+    <div className="min-h-screen flex">
+      <aside className="w-64 bg-brand-900 text-white flex flex-col">
+        <div className="p-6 border-b border-brand-800">
+          <h1 className="text-lg font-bold">Taller Electrónica</h1>
+          <p className="text-xs text-gray-400">Armada RD</p>
+        </div>
+
+        <nav className="flex-1 p-4 space-y-1">
+          {navigation.map((item) => {
+            if (item.adminOnly && !isAdmin) return null
+            const Icon = item.icon
+            return (
+              <Link
+                key={item.name}
+                to={item.href}
+                className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium hover:bg-brand-800 transition-colors"
+              >
+                <Icon className="h-5 w-5" />
+                {item.name}
+              </Link>
+            )
+          })}
+        </nav>
+
+        <div className="p-4 border-t border-brand-800">
+          <div className="mb-3 text-sm">
+            <p className="font-medium">{user?.name}</p>
+            <p className="text-xs text-gray-400 capitalize">{user?.role}</p>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="flex w-full items-center gap-3 px-3 py-2 rounded-md text-sm font-medium hover:bg-brand-800 transition-colors"
+          >
+            <ArrowRightOnRectangleIcon className="h-5 w-5" />
+            Cerrar sesión
+          </button>
+        </div>
+      </aside>
+
+      <main className="flex-1 p-8 bg-gray-50 overflow-auto">
+        {children}
+      </main>
+    </div>
+  )
+}

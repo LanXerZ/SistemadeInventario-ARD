@@ -1,0 +1,300 @@
+import React, { useEffect, useState } from 'react'
+import { useParams, useNavigate, Link } from 'react-router-dom'
+import toast from 'react-hot-toast'
+import { ArrowLeftIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { inventoryApi } from '../services/inventoryApi'
+import { useAuth } from '../context/AuthContext'
+
+const documentTypes = [
+  { value: 'oficio', label: 'Oficio' },
+  { value: 'conduce', label: 'Conduce' },
+  { value: 'factura', label: 'Factura' },
+  { value: 'directo', label: 'Directo' },
+]
+
+export default function ItemDetailPage() {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const canEdit = user?.role === 'admin' || user?.role === 'almacenista'
+
+  const [item, setItem] = useState(null)
+  const [movements, setMovements] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showEntryForm, setShowEntryForm] = useState(false)
+  const [movementForm, setMovementForm] = useState({
+    movement_type: 'entry',
+    quantity: 1,
+    document_type: 'directo',
+    document_number: '',
+    notes: '',
+  })
+
+  useEffect(() => {
+    fetchItem()
+    fetchMovements()
+  }, [id])
+
+  const fetchItem = async () => {
+    try {
+      const { data } = await inventoryApi.getItem(id)
+      setItem(data)
+    } catch (error) {
+      toast.error('Error al cargar el artículo')
+      navigate('/inventory')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchMovements = async () => {
+    try {
+      const { data } = await inventoryApi.getStockMovements({ item: id })
+      setMovements(data)
+    } catch (error) {
+      console.error('Failed to fetch movements', error)
+    }
+  }
+
+  const handleMovementChange = (e) => {
+    const { name, value } = e.target
+    setMovementForm((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleMovementSubmit = async (e) => {
+    e.preventDefault()
+    try {
+      await inventoryApi.createStockMovement({
+        item: id,
+        movement_type: movementForm.movement_type,
+        quantity: Number(movementForm.quantity),
+        document_type: movementForm.document_type,
+        document_number: movementForm.document_number,
+        notes: movementForm.notes,
+      })
+      toast.success('Movimiento registrado')
+      setShowEntryForm(false)
+      setMovementForm({
+        movement_type: 'entry',
+        quantity: 1,
+        document_type: 'directo',
+        document_number: '',
+        notes: '',
+      })
+      fetchItem()
+      fetchMovements()
+    } catch (error) {
+      const message =
+        error.response?.data?.detail ||
+        Object.values(error.response?.data || {}).flat().join(', ') ||
+        'Error al registrar el movimiento'
+      toast.error(message)
+    }
+  }
+
+  if (loading) {
+    return <p className="text-gray-600">Cargando...</p>
+  }
+
+  if (!item) {
+    return null
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Link
+          to="/inventory"
+          className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900"
+        >
+          <ArrowLeftIcon className="h-4 w-4 mr-1" />
+          Volver
+        </Link>
+      </div>
+
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">{item.name}</h2>
+          <p className="text-gray-600 mt-1">
+            {item.sku || item.part_number || 'Sin código'} · {item.category_name}
+          </p>
+        </div>
+        {item.is_critical && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-800">
+            <ExclamationTriangleIcon className="h-4 w-4" />
+            Stock crítico
+          </span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Detalles</h3>
+            <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Descripción</dt>
+                <dd className="mt-1 text-sm text-gray-900">{item.description || '—'}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Aplicación</dt>
+                <dd className="mt-1 text-sm text-gray-900">{item.application || '—'}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Ubicación</dt>
+                <dd className="mt-1 text-sm text-gray-900">{item.location}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Unidad</dt>
+                <dd className="mt-1 text-sm text-gray-900">{item.unit}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Stock mínimo</dt>
+                <dd className="mt-1 text-sm text-gray-900">{item.minimum_stock}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Estado</dt>
+                <dd className="mt-1 text-sm text-gray-900">
+                  {item.is_active ? 'Activo' : 'Inactivo'}
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Historial de movimientos</h3>
+            {movements.length === 0 ? (
+              <p className="text-sm text-gray-500">No hay movimientos registrados.</p>
+            ) : (
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Fecha</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Tipo</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Cantidad</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Documento</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Notas</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {movements.map((movement) => (
+                    <tr key={movement.id}>
+                      <td className="px-4 py-2 text-sm text-gray-900">
+                        {new Date(movement.created_at).toLocaleString('es-DO')}
+                      </td>
+                      <td className="px-4 py-2 text-sm text-gray-900">
+                        {movement.movement_type === 'entry' ? 'Entrada' : 'Salida'}
+                      </td>
+                      <td className="px-4 py-2 text-sm text-gray-900">{movement.quantity}</td>
+                      <td className="px-4 py-2 text-sm text-gray-900">
+                        {movement.document_type} {movement.document_number}
+                      </td>
+                      <td className="px-4 py-2 text-sm text-gray-900">{movement.notes || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Stock actual</h3>
+            <p className="text-3xl font-bold text-brand-800">
+              {item.quantity} <span className="text-lg font-normal text-gray-600">{item.unit}</span>
+            </p>
+          </div>
+
+          {canEdit && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Acciones</h3>
+              <div className="space-y-3">
+                <button
+                  onClick={() => setShowEntryForm(!showEntryForm)}
+                  className="w-full rounded-md bg-brand-800 px-4 py-2 text-sm font-medium text-white hover:bg-brand-900"
+                >
+                  Registrar movimiento
+                </button>
+                <Link
+                  to={`/inventory/${item.id}/edit`}
+                  className="block w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-center text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Editar artículo
+                </Link>
+              </div>
+
+              {showEntryForm && (
+                <form onSubmit={handleMovementSubmit} className="mt-4 space-y-4 border-t border-gray-200 pt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Tipo</label>
+                    <select
+                      name="movement_type"
+                      value={movementForm.movement_type}
+                      onChange={handleMovementChange}
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                    >
+                      <option value="entry">Entrada</option>
+                      <option value="exit">Salida</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Cantidad</label>
+                    <input
+                      name="quantity"
+                      type="number"
+                      min="1"
+                      value={movementForm.quantity}
+                      onChange={handleMovementChange}
+                      required
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Documento</label>
+                    <select
+                      name="document_type"
+                      value={movementForm.document_type}
+                      onChange={handleMovementChange}
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                    >
+                      {documentTypes.map((type) => (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Número</label>
+                    <input
+                      name="document_number"
+                      value={movementForm.document_number}
+                      onChange={handleMovementChange}
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Notas</label>
+                    <input
+                      name="notes"
+                      value={movementForm.notes}
+                      onChange={handleMovementChange}
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full rounded-md bg-brand-800 px-4 py-2 text-sm font-medium text-white hover:bg-brand-900"
+                  >
+                    Guardar movimiento
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

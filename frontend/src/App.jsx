@@ -3,6 +3,10 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import Layout from './components/Layout'
 import LoginPage from './pages/LoginPage'
+import InventoryPage from './pages/InventoryPage'
+import ItemFormPage from './pages/ItemFormPage'
+import ItemDetailPage from './pages/ItemDetailPage'
+import DashboardPage from './pages/DashboardPage'
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, loading } = useAuth()
@@ -27,14 +31,7 @@ function ProtectedRoute({ children, adminOnly = false }) {
 }
 
 function Dashboard() {
-  return (
-    <div>
-      <h2 className="text-2xl font-bold text-gray-900">Inicio</h2>
-      <p className="mt-2 text-gray-600">
-        Sistema de Inventario del Taller de Electrónica.
-      </p>
-    </div>
-  )
+  return <DashboardPage />
 }
 
 function Placeholder({ title }) {
@@ -62,7 +59,31 @@ export default function App() {
         path="/inventory"
         element={
           <ProtectedRoute>
-            <Placeholder title="Inventario" />
+            <InventoryPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/inventory/new"
+        element={
+          <ProtectedRoute>
+            <ItemFormPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/inventory/:id"
+        element={
+          <ProtectedRoute>
+            <ItemDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/inventory/:id/edit"
+        element={
+          <ProtectedRoute>
+            <ItemFormPage />
           </ProtectedRoute>
         }
       />

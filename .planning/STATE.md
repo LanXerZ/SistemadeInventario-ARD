@@ -1,8 +1,8 @@
 # State: Sistema de Inventario del Taller de Electrónica - Armada RD
 
 **Project:** Taller de Electrónica - Armada RD
-**Current phase:** Phase 1 — Foundation
-**Status:** Complete
+**Current phase:** Phase 2 — Inventory Module
+**Status:** In Progress
 
 ## Project Reference
 

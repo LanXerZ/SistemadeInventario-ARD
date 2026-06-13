@@ -7,6 +7,9 @@ import InventoryPage from './pages/InventoryPage'
 import ItemFormPage from './pages/ItemFormPage'
 import ItemDetailPage from './pages/ItemDetailPage'
 import DashboardPage from './pages/DashboardPage'
+import WorkOrdersPage from './pages/WorkOrdersPage'
+import WorkOrderFormPage from './pages/WorkOrderFormPage'
+import WorkOrderDetailPage from './pages/WorkOrderDetailPage'
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, loading } = useAuth()
@@ -91,7 +94,31 @@ export default function App() {
         path="/workorders"
         element={
           <ProtectedRoute>
-            <Placeholder title="Órdenes de Trabajo" />
+            <WorkOrdersPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/workorders/new"
+        element={
+          <ProtectedRoute>
+            <WorkOrderFormPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/workorders/:id"
+        element={
+          <ProtectedRoute>
+            <WorkOrderDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/workorders/:id/edit"
+        element={
+          <ProtectedRoute>
+            <WorkOrderFormPage />
           </ProtectedRoute>
         }
       />

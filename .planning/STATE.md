@@ -1,8 +1,8 @@
 # State: Sistema de Inventario del Taller de Electrónica - Armada RD
 
 **Project:** Taller de Electrónica - Armada RD
-**Current phase:** Phase 2 — Inventory Module
-**Status:** Complete
+**Current phase:** Phase 3 — Work Orders Module
+**Status:** In Progress
 
 ## Project Reference
 
@@ -10,7 +10,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 
 **Core value:** An Almacenista can account for every part and tool that enters or leaves the workshop, and a Técnico can only see and affect the work orders and part requests assigned to them.
 
-**Current focus:** Phase 3 — Work Orders Module
+**Current focus:** Implement WorkOrder model, sequential numbering, assignments, and part requests.
 
 ## Completed Work
 
@@ -37,18 +37,20 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 - [x] Inventory frontend pages: list, create/edit form, detail
 - [x] Stock entry/exit form with document tracking
 - [x] Dashboard with critical stock alerts
-- [x] 17 passing backend tests
 - [x] Category filter fixed (custom ItemFilter with NumberFilter)
 - [x] Item image upload with local storage
 - [x] Image preview in inventory list and detail
 - [x] Button renamed from 'Buscar' to 'Filtrar'
+- [x] 17 passing backend tests
+- [x] Sample inventory data created
 
 ## Next Steps
 
-1. Begin Phase 3 execution (Work Orders Module) with Superpowers TDD
-2. Implement WorkOrder model with sequential numbering
+1. Implement WorkOrder model with sequential numbering
+2. Implement WorkOrderPart model for part requests
 3. Build work order API endpoints
 4. Create work order frontend pages
+5. Add printable delivery note
 
 ## Blockers
 
@@ -61,4 +63,4 @@ None.
 - Spec-driven development: `REQUIREMENTS.md` and `ROADMAP.md` are the source of truth for phases.
 
 ---
-*State updated: 2026-06-13 after Phase 2 completion*
+*State updated: 2026-06-13 after Phase 3 start*

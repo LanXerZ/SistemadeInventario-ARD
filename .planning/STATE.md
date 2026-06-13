@@ -38,7 +38,10 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 - [x] Stock entry/exit form with document tracking
 - [x] Dashboard with critical stock alerts
 - [x] 17 passing backend tests
-- [x] Sample inventory data created
+- [x] Category filter fixed (custom ItemFilter with NumberFilter)
+- [x] Item image upload with local storage
+- [x] Image preview in inventory list and detail
+- [x] Button renamed from 'Buscar' to 'Filtrar'
 
 ## Next Steps
 

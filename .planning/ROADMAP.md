@@ -11,7 +11,7 @@
 | 2 | Inventory Core | Component categories, stock entry, critical alerts | INV-01..06 | 6 | ✅ |
 | 3 | Work Orders | OT lifecycle, assignments, part requests, delivery note | OT-01..07 | 7 | ✅ |
 | 4 | Tool Custody | Tool registry, daily loans, returns, disposal | TOOL-01..05 | 5 | ✅ |
-| 5 | Security Hardening | Session timeout, HTTPS config, audit UI, immutability | AUTH-05, AUDIT-02..04 | 4 |
+| 5 | Security Hardening | Session timeout, HTTPS config, audit UI, immutability | AUTH-05, AUDIT-02..04 | 4 | ✅ |
 
 ---
 
@@ -75,16 +75,17 @@
 
 ---
 
-### Phase 5: Security Hardening
+### Phase 5: Security Hardening ✅
 **Goal:** Production-ready security with session timeout, HTTPS enforcement, and audit UI.
 **Mode:** mvp
 **Requirements:** AUTH-05, AUDIT-02, AUDIT-03, AUDIT-04
+**Status:** Complete
 
 **Success Criteria:**
-1. Sessions expire after 15 minutes of inactivity on both frontend and backend
-2. Audit log captures timestamp, IP, user, table, record id, and serialized changes
-3. Audit log UI is read-only for admin/Almacenista
-4. Production config enforces HTTPS and secure cookies
+1. ✅ Sessions expire after 15 minutes of inactivity on both frontend and backend
+2. ✅ Audit log captures timestamp, IP, user, table, record id, and serialized changes
+3. ✅ Audit log UI is read-only for admin/Almacenista
+4. ✅ Production config enforces HTTPS and secure cookies
 
 ---
 

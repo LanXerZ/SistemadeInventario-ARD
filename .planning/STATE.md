@@ -2,7 +2,7 @@
 
 **Project:** Taller de Electrónica - Armada RD
 **Current phase:** Phase 5 — Security Hardening & Audit UI
-**Status:** In Progress
+**Status:** Complete
 
 ## Project Reference
 
@@ -10,7 +10,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 
 **Core value:** An Almacenista can account for every part and tool that enters or leaves the workshop, and a Técnico can only see and affect the work orders and part requests assigned to them.
 
-**Current focus:** Add session timeout, audit log UI, and verify production security settings.
+**Current focus:** MVP complete. Ready for deployment preparation and user acceptance testing.
 
 ## Completed Work
 
@@ -52,17 +52,19 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 - [x] Tool custody API with loan/return/disposal actions
 - [x] Tool custody frontend pages: list, form, detail
 - [x] Overdue tool detection
+- [x] Session timeout warning and auto-logout (15 minutes)
+- [x] Audit log API endpoints (read-only)
+- [x] Audit log UI for admin/almacenista
+- [x] Production security settings (HTTPS, HSTS, secure cookies)
 - [x] 34 passing backend tests
-- [x] Sample tools created
 
 ## Next Steps
 
-1. Add frontend session timeout with warning and auto-logout
-2. Create audit log API endpoints
-3. Create audit log UI (read-only for admin/almacenista)
-4. Add overdue tool alerts to dashboard
-5. Verify HTTPS and secure cookie production settings
-6. Run final test suite
+1. Deploy to production environment
+2. Configure PostgreSQL database
+3. Set environment variables for HTTPS/security
+4. User acceptance testing with workshop staff
+5. Create admin user accounts for production
 
 ## Blockers
 
@@ -75,4 +77,4 @@ None.
 - Spec-driven development: `REQUIREMENTS.md` and `ROADMAP.md` are the source of truth for phases.
 
 ---
-*State updated: 2026-06-13 after Phase 5 start*
+*State updated: 2026-06-13 after Phase 5 completion (MVP complete)*

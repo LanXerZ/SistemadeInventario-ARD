@@ -22,7 +22,7 @@ export default function InventoryPage() {
   const fetchCategories = async () => {
     try {
       const { data } = await inventoryApi.getCategories()
-      setCategories(data)
+      setCategories(data.results || data)
     } catch (error) {
       console.error('Failed to fetch categories', error)
     }
@@ -35,7 +35,7 @@ export default function InventoryPage() {
       if (search) params.search = search
       if (categoryFilter) params.category = categoryFilter
       const { data } = await inventoryApi.getItems(params)
-      setItems(data)
+      setItems(data.results || data)
     } catch (error) {
       toast.error('Error al cargar el inventario')
       console.error(error)

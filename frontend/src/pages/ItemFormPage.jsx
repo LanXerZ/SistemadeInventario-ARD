@@ -46,7 +46,7 @@ export default function ItemFormPage() {
   const fetchCategories = async () => {
     try {
       const { data } = await inventoryApi.getCategories()
-      setCategories(data)
+      setCategories(data.results || data)
     } catch (error) {
       toast.error('Error al cargar categorías')
     }

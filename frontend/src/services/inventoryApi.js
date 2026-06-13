@@ -3,6 +3,11 @@ import api from './api'
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001/api/v1'
 
 export const inventoryApi = {
+  // Reports
+  downloadInventoryReport: (format = 'pdf') => api.get(`/items/report/?format=${format}`, {
+    responseType: 'blob',
+  }),
+
   // Categories
   getCategories: () => api.get('/inventory/categories/'),
   createCategory: (data) => api.post('/inventory/categories/', data),

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   HomeIcon,
@@ -10,12 +10,13 @@ import {
   ShieldCheckIcon,
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../context/AuthContext'
+import { workOrderApi } from '../services/workOrderApi'
 import SessionTimeout from './SessionTimeout'
 
 const navigation = [
   { name: 'Inicio', href: '/', icon: HomeIcon },
   { name: 'Inventario', href: '/inventory', icon: CubeIcon },
-  { name: 'Órdenes', href: '/workorders', icon: ClipboardDocumentListIcon },
+  { name: 'Órdenes', href: '/workorders', icon: ClipboardDocumentListIcon, notify: true },
   { name: 'Herramientas', href: '/tools', icon: WrenchIcon },
   { name: 'Auditoría', href: '/audit', icon: ShieldCheckIcon, adminOnly: true },
   { name: 'Usuarios', href: '/users', icon: UsersIcon, adminOnly: true },
@@ -24,6 +25,24 @@ const navigation = [
 export default function Layout({ children }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const [pendingParts, setPendingParts] = useState(0)
+
+  useEffect(() => {
+    if (!user) return
+
+    const fetchPendingParts = async () => {
+      try {
+        const { data } = await workOrderApi.getPendingPartsCount()
+        setPendingParts(data.count)
+      } catch (error) {
+        console.error('Failed to fetch pending parts count', error)
+      }
+    }
+
+    fetchPendingParts()
+    const interval = setInterval(fetchPendingParts, 60000) // Refresh every minute
+    return () => clearInterval(interval)
+  }, [user])
 
   const handleLogout = async () => {
     await logout()
@@ -49,10 +68,17 @@ export default function Layout({ children }) {
               <Link
                 key={item.name}
                 to={item.href}
-                className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium hover:bg-brand-800 transition-colors"
+                className="flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium hover:bg-brand-800 transition-colors"
               >
-                <Icon className="h-5 w-5" />
-                {item.name}
+                <div className="flex items-center gap-3">
+                  <Icon className="h-5 w-5" />
+                  {item.name}
+                </div>
+                {item.notify && pendingParts > 0 && (
+                  <span className="inline-flex items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">
+                    {pendingParts}
+                  </span>
+                )}
               </Link>
             )
           })}

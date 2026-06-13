@@ -14,6 +14,8 @@ import ToolsPage from './pages/ToolsPage'
 import ToolFormPage from './pages/ToolFormPage'
 import ToolDetailPage from './pages/ToolDetailPage'
 import AuditPage from './pages/AuditPage'
+import UsersPage from './pages/UsersPage'
+import UserFormPage from './pages/UserFormPage'
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, loading } = useAuth()
@@ -39,15 +41,6 @@ function ProtectedRoute({ children, adminOnly = false }) {
 
 function Dashboard() {
   return <DashboardPage />
-}
-
-function Placeholder({ title }) {
-  return (
-    <div>
-      <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
-      <p className="mt-2 text-gray-600">Módulo en desarrollo.</p>
-    </div>
-  )
 }
 
 export default function App() {
@@ -170,7 +163,23 @@ export default function App() {
         path="/users"
         element={
           <ProtectedRoute adminOnly>
-            <Placeholder title="Usuarios" />
+            <UsersPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/users/new"
+        element={
+          <ProtectedRoute adminOnly>
+            <UserFormPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/users/:id/edit"
+        element={
+          <ProtectedRoute adminOnly>
+            <UserFormPage />
           </ProtectedRoute>
         }
       />

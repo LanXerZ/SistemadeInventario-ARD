@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, MagnifyingGlassIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline'
 import { workOrderApi } from '../services/workOrderApi'
 import { useAuth } from '../context/AuthContext'
+import { downloadBlob } from '../utils/download'
 
 const statusColors = {
   received: 'bg-gray-100 text-gray-800',
@@ -54,19 +55,47 @@ export default function WorkOrdersPage() {
     }
   }
 
+  const handleDownloadReport = async (format) => {
+    try {
+      const response = await workOrderApi.downloadWorkOrdersReport(format)
+      const extension = format === 'pdf' ? 'pdf' : 'xlsx'
+      downloadBlob(response, `ordenes_trabajo_${new Date().toISOString().slice(0, 10)}.${extension}`)
+    } catch (error) {
+      toast.error('Error al generar el reporte')
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">Órdenes de Trabajo</h2>
-        {canEdit && (
-          <Link
-            to="/workorders/new"
-            className="inline-flex items-center gap-2 rounded-md bg-brand-800 px-4 py-2 text-sm font-medium text-white hover:bg-brand-900"
-          >
-            <PlusIcon className="h-4 w-4" />
-            Nueva OT
-          </Link>
-        )}
+        <div className="flex items-center gap-2">
+          {canEdit && (
+            <>
+              <button
+                onClick={() => handleDownloadReport('pdf')}
+                className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <DocumentArrowDownIcon className="h-4 w-4" />
+                PDF
+              </button>
+              <button
+                onClick={() => handleDownloadReport('excel')}
+                className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <DocumentArrowDownIcon className="h-4 w-4" />
+                Excel
+              </button>
+              <Link
+                to="/workorders/new"
+                className="inline-flex items-center gap-2 rounded-md bg-brand-800 px-4 py-2 text-sm font-medium text-white hover:bg-brand-900"
+              >
+                <PlusIcon className="h-4 w-4" />
+                Nueva OT
+              </Link>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">

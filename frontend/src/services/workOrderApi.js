@@ -16,6 +16,14 @@ export const workOrderApi = {
   closeWorkOrder: (id, data) => api.post(`/work-orders/work-orders/${id}/close/`, data),
   deliverWorkOrder: (id) => api.post(`/work-orders/work-orders/${id}/deliver/`),
 
+  // Notifications
+  getPendingPartsCount: () => api.get('/work-orders/work-orders/pending_parts/'),
+
+  // Reports
+  downloadWorkOrdersReport: (format = 'pdf') => api.get(`/work-orders/report/?format=${format}`, {
+    responseType: 'blob',
+  }),
+
   // Technicians
   getTechnicians: () => api.get('/work-orders/technicians/'),
 }

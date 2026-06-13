@@ -12,6 +12,11 @@ export const toolApi = {
   disposeTool: (id, data) => api.post(`/tools/tools/${id}/dispose/`, data),
   getOverdueTools: () => api.get('/tools/tools/overdue/'),
 
+  // Reports
+  downloadToolsReport: (format = 'pdf') => api.get(`/tools/report/?format=${format}`, {
+    responseType: 'blob',
+  }),
+
   // Loans
   getLoans: (params = {}) => api.get('/tools/loans/', { params }),
 

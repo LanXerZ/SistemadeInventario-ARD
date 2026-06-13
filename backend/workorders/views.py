@@ -1,10 +1,13 @@
 from django.db.models import Q
 from django.contrib.auth import get_user_model
+from django.http import FileResponse
 from django.utils import timezone
+from datetime import datetime
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
+from utils.reports import build_report
 from .models import WorkOrder, WorkOrderPart
 from inventory.models import Item
 from .serializers import (
@@ -142,6 +145,47 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
 
         serializer = WorkOrderDetailSerializer(work_order)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def pending_parts(self, request):
+        user = request.user
+        parts = WorkOrderPart.objects.filter(status=WorkOrderPart.Status.REQUESTED)
+
+        if user.role == 'tecnico':
+            parts = parts.filter(work_order__technician=user)
+        # admin y almacenista ven todas
+
+        return Response({'count': parts.count()})
+
+    @action(detail=False, methods=['get'])
+    def report(self, request):
+        format = request.query_params.get('format', 'pdf')
+        if format not in ('pdf', 'excel'):
+            return Response({'detail': 'Formato inválido. Use pdf o excel.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        work_orders = self.get_queryset()
+        headers = ['OT', 'Unidad origen', 'Equipo', 'Técnico', 'Estado', 'Fecha recibido']
+        rows = [
+            [
+                wo.ot_number,
+                wo.origin_unit,
+                f"{wo.equipment_brand or ''} {wo.equipment_model or ''}".strip() or '—',
+                wo.technician.name,
+                wo.get_status_display(),
+                wo.received_at.strftime('%d/%m/%Y'),
+            ]
+            for wo in work_orders
+        ]
+
+        buffer = build_report('Reporte de Órdenes de Trabajo', headers, rows, format)
+        content_type = 'application/pdf' if format == 'pdf' else 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        extension = 'pdf' if format == 'pdf' else 'xlsx'
+        return FileResponse(
+            buffer,
+            as_attachment=True,
+            filename=f"ordenes_trabajo_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{extension}",
+            content_type=content_type,
+        )
 
 
 class TechnicianViewSet(viewsets.ReadOnlyModelViewSet):

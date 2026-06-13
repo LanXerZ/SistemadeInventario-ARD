@@ -1,8 +1,11 @@
 from django.db.models import Q
+from django.http import FileResponse
+from datetime import datetime
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend, FilterSet, NumberFilter
+from utils.reports import build_report
 from .models import Category, Item, StockMovement
 from .serializers import (
     CategorySerializer,
@@ -58,6 +61,38 @@ class ItemViewSet(viewsets.ModelViewSet):
                 queryset = [item for item in queryset if not item.is_critical]
 
         return queryset
+
+    @action(detail=False, methods=['get'])
+    def report(self, request):
+        format = request.query_params.get('format', 'pdf')
+        if format not in ('pdf', 'excel'):
+            return Response({'detail': 'Formato inválido. Use pdf o excel.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        items = self.get_queryset()
+        headers = ['Nombre', 'SKU', 'Categoría', 'Ubicación', 'Stock', 'Mínimo', 'Unidad', 'Estado']
+        rows = [
+            [
+                item.name,
+                item.sku or '—',
+                item.category.name,
+                item.location,
+                item.quantity,
+                item.minimum_stock,
+                item.unit,
+                'Activo' if item.is_active else 'Inactivo',
+            ]
+            for item in items
+        ]
+
+        buffer = build_report('Reporte de Inventario', headers, rows, format)
+        content_type = 'application/pdf' if format == 'pdf' else 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        extension = 'pdf' if format == 'pdf' else 'xlsx'
+        return FileResponse(
+            buffer,
+            as_attachment=True,
+            filename=f"inventario_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{extension}",
+            content_type=content_type,
+        )
 
     @action(detail=False, methods=['get'])
     def critical(self, request):

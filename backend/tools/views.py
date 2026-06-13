@@ -1,11 +1,13 @@
 from django.db.models import Q, Prefetch
+from django.http import FileResponse
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, datetime
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth import get_user_model
+from utils.reports import build_report
 from .models import Tool, ToolLoan
 from .serializers import (
     ToolListSerializer,
@@ -126,6 +128,37 @@ class ToolViewSet(viewsets.ModelViewSet):
         tools = [tool for tool in self.get_queryset() if tool.is_overdue()]
         serializer = ToolListSerializer(tools, many=True)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def report(self, request):
+        format = request.query_params.get('format', 'pdf')
+        if format not in ('pdf', 'excel'):
+            return Response({'detail': 'Formato inválido. Use pdf o excel.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        tools = self.get_queryset()
+        headers = ['Código', 'Nombre', 'Tipo', 'Marca', 'Modelo', 'Serial', 'Estado']
+        rows = [
+            [
+                tool.code,
+                tool.name,
+                tool.tool_type,
+                tool.brand or '—',
+                tool.model or '—',
+                tool.serial or '—',
+                tool.get_status_display(),
+            ]
+            for tool in tools
+        ]
+
+        buffer = build_report('Reporte de Herramientas', headers, rows, format)
+        content_type = 'application/pdf' if format == 'pdf' else 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        extension = 'pdf' if format == 'pdf' else 'xlsx'
+        return FileResponse(
+            buffer,
+            as_attachment=True,
+            filename=f"herramientas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{extension}",
+            content_type=content_type,
+        )
 
 
 class ToolLoanViewSet(viewsets.ReadOnlyModelViewSet):

@@ -1,8 +1,8 @@
 # State: Sistema de Inventario del Taller de Electrónica - Armada RD
 
 **Project:** Taller de Electrónica - Armada RD
-**Current phase:** Phase 5 — Security Hardening & Audit UI
-**Status:** Complete
+**Current phase:** Post-MVP Improvements
+**Status:** In Progress
 
 ## Project Reference
 
@@ -10,10 +10,11 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 
 **Core value:** An Almacenista can account for every part and tool that enters or leaves the workshop, and a Técnico can only see and affect the work orders and part requests assigned to them.
 
-**Current focus:** MVP complete. Ready for deployment preparation and user acceptance testing.
+**Current focus:** Implementing high-priority improvements from post-MVP report.
 
 ## Completed Work
 
+### MVP (Phases 1-5)
 - [x] Project directory created: `C:\Users\warlyn_estrella\TallerElectronicaARD`
 - [x] Git initialized with `main` branch
 - [x] `CLAUDE.md` created with project context and skill routing
@@ -56,15 +57,27 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 - [x] Audit log API endpoints (read-only)
 - [x] Audit log UI for admin/almacenista
 - [x] Production security settings (HTTPS, HSTS, secure cookies)
+
+### Post-MVP Improvements
+- [x] User management UI (list, create, edit, delete users)
+- [x] PDF reports for inventory, work orders, and tools
+- [x] Excel reports for inventory, work orders, and tools
+- [x] Notification badge for pending part requests
 - [x] 34 passing backend tests
 
 ## Next Steps
 
-1. Deploy to production environment
-2. Configure PostgreSQL database
-3. Set environment variables for HTTPS/security
-4. User acceptance testing with workshop staff
-5. Create admin user accounts for production
+1. Implement medium-priority UX improvements:
+   - Global search across modules
+   - Enhanced dashboard with charts/statistics
+   - Per-object audit history tabs
+2. Implement low-priority technical improvements:
+   - Frontend E2E tests
+   - PostgreSQL production setup
+   - Automated backups
+   - API rate limiting
+3. Deploy to production
+4. User acceptance testing
 
 ## Blockers
 
@@ -77,4 +90,4 @@ None.
 - Spec-driven development: `REQUIREMENTS.md` and `ROADMAP.md` are the source of truth for phases.
 
 ---
-*State updated: 2026-06-13 after Phase 5 completion (MVP complete)*
+*State updated: 2026-06-13 after implementing high-priority improvements*

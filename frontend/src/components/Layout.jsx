@@ -7,14 +7,17 @@ import {
   ClipboardDocumentListIcon,
   UsersIcon,
   ArrowRightOnRectangleIcon,
+  ShieldCheckIcon,
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../context/AuthContext'
+import SessionTimeout from './SessionTimeout'
 
 const navigation = [
   { name: 'Inicio', href: '/', icon: HomeIcon },
   { name: 'Inventario', href: '/inventory', icon: CubeIcon },
   { name: 'Órdenes', href: '/workorders', icon: ClipboardDocumentListIcon },
   { name: 'Herramientas', href: '/tools', icon: WrenchIcon },
+  { name: 'Auditoría', href: '/audit', icon: ShieldCheckIcon, adminOnly: true },
   { name: 'Usuarios', href: '/users', icon: UsersIcon, adminOnly: true },
 ]
 
@@ -31,6 +34,7 @@ export default function Layout({ children }) {
 
   return (
     <div className="min-h-screen flex">
+      <SessionTimeout />
       <aside className="w-64 bg-brand-900 text-white flex flex-col">
         <div className="p-6 border-b border-brand-800">
           <h1 className="text-lg font-bold">Taller Electrónica</h1>

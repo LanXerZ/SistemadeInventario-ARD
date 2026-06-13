@@ -13,6 +13,7 @@ import WorkOrderDetailPage from './pages/WorkOrderDetailPage'
 import ToolsPage from './pages/ToolsPage'
 import ToolFormPage from './pages/ToolFormPage'
 import ToolDetailPage from './pages/ToolDetailPage'
+import AuditPage from './pages/AuditPage'
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, loading } = useAuth()
@@ -154,6 +155,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <ToolFormPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/audit"
+        element={
+          <ProtectedRoute>
+            <AuditPage />
           </ProtectedRoute>
         }
       />

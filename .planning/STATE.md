@@ -1,8 +1,8 @@
 # State: Sistema de Inventario del Taller de Electrónica - Armada RD
 
 **Project:** Taller de Electrónica - Armada RD
-**Current phase:** Phase 4 — Tool Custody Module
-**Status:** Complete
+**Current phase:** Phase 5 — Security Hardening & Audit UI
+**Status:** In Progress
 
 ## Project Reference
 
@@ -10,7 +10,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 
 **Core value:** An Almacenista can account for every part and tool that enters or leaves the workshop, and a Técnico can only see and affect the work orders and part requests assigned to them.
 
-**Current focus:** Phase 5 — Security Hardening & Audit UI
+**Current focus:** Add session timeout, audit log UI, and verify production security settings.
 
 ## Completed Work
 
@@ -57,10 +57,12 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 
 ## Next Steps
 
-1. Begin Phase 5 execution (Security Hardening & Audit UI)
-2. Add frontend session timeout warning/auto-logout
-3. Create Audit Log UI for admin/almacenista
-4. Verify HTTPS config and secure cookies for production
+1. Add frontend session timeout with warning and auto-logout
+2. Create audit log API endpoints
+3. Create audit log UI (read-only for admin/almacenista)
+4. Add overdue tool alerts to dashboard
+5. Verify HTTPS and secure cookie production settings
+6. Run final test suite
 
 ## Blockers
 
@@ -73,4 +75,4 @@ None.
 - Spec-driven development: `REQUIREMENTS.md` and `ROADMAP.md` are the source of truth for phases.
 
 ---
-*State updated: 2026-06-13 after Phase 4 completion*
+*State updated: 2026-06-13 after Phase 5 start*

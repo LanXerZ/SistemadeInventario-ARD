@@ -8,7 +8,7 @@
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
 | 1 | Foundation | Project scaffold, auth, audit middleware | AUTH-01..04, AUDIT-01 | 5 | ✅ |
-| 2 | Inventory Core | Component categories, stock entry, critical alerts | INV-01..06 | 6 |
+| 2 | Inventory Core | Component categories, stock entry, critical alerts | INV-01..06 | 6 | ✅ |
 | 3 | Work Orders | OT lifecycle, assignments, part requests, delivery note | OT-01..07 | 7 |
 | 4 | Tool Custody | Tool registry, daily loans, returns, disposal | TOOL-01..05 | 5 |
 | 5 | Security Hardening | Session timeout, HTTPS config, audit UI, immutability | AUTH-05, AUDIT-02..04 | 4 |
@@ -30,17 +30,18 @@
 
 ---
 
-### Phase 2: Inventory Core
+### Phase 2: Inventory Core ✅
 **Goal:** Components, categories, stock entry, critical-stock alerts, and fast search.
 **Mode:** mvp
 **Requirements:** INV-01, INV-02, INV-03, INV-04, INV-05, INV-06
+**Status:** Complete
 
 **Success Criteria:**
-1. Almacenista can create/edit components with SKU, location, category, and critical threshold
-2. Stock entry form supports Oficio/Conduce/Factura/Directo document types
-3. Dashboard shows visual alerts for critical items below minimum stock
-4. Search returns results filtered by name, part number, or application in under 500ms
-5. Stock quantities update correctly on entry
+1. ✅ Almacenista can create/edit components with SKU, location, category, and critical threshold
+2. ✅ Stock entry form supports Oficio/Conduce/Factura/Directo document types
+3. ✅ Dashboard shows visual alerts for critical items below minimum stock
+4. ✅ Search returns results filtered by name, part number, or application in under 500ms
+5. ✅ Stock quantities update correctly on entry
 
 ---
 

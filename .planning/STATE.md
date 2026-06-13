@@ -2,7 +2,7 @@
 
 **Project:** Taller de Electrónica - Armada RD
 **Current phase:** Phase 2 — Inventory Module
-**Status:** In Progress
+**Status:** Complete
 
 ## Project Reference
 
@@ -10,7 +10,7 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 
 **Core value:** An Almacenista can account for every part and tool that enters or leaves the workshop, and a Técnico can only see and affect the work orders and part requests assigned to them.
 
-**Current focus:** Phase 2 — Inventory Module
+**Current focus:** Phase 3 — Work Orders Module
 
 ## Completed Work
 
@@ -32,16 +32,20 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 - [x] Protected routes with role-based access control
 - [x] Responsive layout with sidebar navigation
 - [x] API service with axios interceptors
-- [x] 8 passing backend tests
-- [x] Superuser created for testing (admin@armada.mil.do)
+- [x] Category, Item, and StockMovement models implemented
+- [x] Inventory API with CRUD, search, filters, and critical stock alerts
+- [x] Inventory frontend pages: list, create/edit form, detail
+- [x] Stock entry/exit form with document tracking
+- [x] Dashboard with critical stock alerts
+- [x] 17 passing backend tests
+- [x] Sample inventory data created
 
 ## Next Steps
 
-1. Begin Phase 2 execution (Inventory Module) with Superpowers TDD
-2. Implement Category and Item models with migrations
-3. Build inventory API endpoints (CRUD, search, filters)
-4. Create inventory list and detail pages in frontend
-5. Add stock entry/exit functionality with audit logging
+1. Begin Phase 3 execution (Work Orders Module) with Superpowers TDD
+2. Implement WorkOrder model with sequential numbering
+3. Build work order API endpoints
+4. Create work order frontend pages
 
 ## Blockers
 
@@ -54,4 +58,4 @@ None.
 - Spec-driven development: `REQUIREMENTS.md` and `ROADMAP.md` are the source of truth for phases.
 
 ---
-*State updated: 2026-06-13 after Phase 1 completion*
+*State updated: 2026-06-13 after Phase 2 completion*

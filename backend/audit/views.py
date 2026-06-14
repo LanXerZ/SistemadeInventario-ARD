@@ -18,4 +18,4 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = AuditLogSerializer
     permission_classes = [permissions.IsAuthenticated, IsAdminOrAlmacenista]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['action', 'model_name', 'user', 'object_id', 'content_type']
+    filterset_fields = ['action', 'model_name', 'user', 'object_id']

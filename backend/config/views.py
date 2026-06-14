@@ -1,7 +1,7 @@
 from django.db.models import Count, F as models_F, Q
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from inventory.models import Item
@@ -67,3 +67,9 @@ def dashboard_stats(request):
             'disposed': disposed_tools,
         },
     })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def health_check(request):
+    return Response({'status': 'ok'})

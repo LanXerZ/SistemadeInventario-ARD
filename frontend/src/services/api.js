@@ -2,6 +2,12 @@ import axios from 'axios'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001/api/v1'
 
+if (import.meta.env.PROD && !import.meta.env.VITE_API_URL) {
+  console.warn(
+    'VITE_API_URL no está configurada. El frontend apuntará a localhost y no funcionará en producción.'
+  )
+}
+
 const api = axios.create({
   baseURL: API_URL,
   headers: {

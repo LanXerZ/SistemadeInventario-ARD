@@ -14,6 +14,7 @@ Sistema full-stack para la gestión de inventario, órdenes de trabajo y custodi
 - [Uso](#uso)
 - [Estructura del proyecto](#estructura-del-proyecto)
 - [Política de ramas](#política-de-ramas)
+- [Despliegue](#despliegue)
 - [Contribución](#contribución)
 - [Documentación](#documentación)
 - [Licencia](#licencia)
@@ -157,6 +158,50 @@ El frontend estará disponible en `http://localhost:5173/`.
 4. Sube tu rama: `git push origin feat/mi-funcionalidad`
 5. Abre un Pull Request hacia `develop`.
 6. Cuando `develop` esté estable, se fusiona a `main` mediante otro Pull Request.
+
+## Despliegue
+
+### Frontend en GitHub Pages
+
+El frontend está configurado para desplegarse automáticamente en GitHub Pages desde la rama `main`.
+
+**URL actual:** `https://lanxerz.github.io/SistemadeInventario-ARD/`
+
+#### Configuración manual (primera vez)
+
+1. Ve a **Settings → Pages** del repositorio.
+2. En **Source** selecciona **GitHub Actions**.
+3. El workflow `.github/workflows/deploy-frontend.yml` se encargará del resto.
+
+#### Consideraciones importantes
+
+- GitHub Pages sirve solo contenido estático; **no ejecuta Python**.
+- El backend debe estar desplegado en otro servicio.
+- El frontend usa `VITE_API_URL` para saber dónde está el backend. En producción se configura en el workflow.
+
+### Backend en Render (recomendado)
+
+El repositorio incluye `render.yaml` para desplegar el backend con un clic.
+
+1. Crea una cuenta en [Render](https://render.com/).
+2. Desde el dashboard de Render, selecciona **New → Blueprint**.
+3. Conecta el repositorio `LanXerZ/SistemadeInventario-ARD`.
+4. Render creará automáticamente:
+   - Web service para el backend (Django + Gunicorn)
+   - Base de datos PostgreSQL
+   - Variables de entorno necesarias
+5. Una vez desplegado, copia la URL del backend (ej. `https://sistemadeinventario-ard-api.onrender.com`).
+6. Actualiza la variable `VITE_API_URL` en `.github/workflows/deploy-frontend.yml` con la URL real.
+
+### Variables de entorno de producción
+
+| Variable | Descripción | Ejemplo |
+|----------|-------------|---------|
+| `SECRET_KEY` | Clave secreta de Django | Generada automáticamente |
+| `DEBUG` | Modo debug | `False` |
+| `DATABASE_URL` | URL de PostgreSQL | Proporcionada por Render |
+| `CORS_ALLOWED_ORIGINS` | Orígenes permitidos | `https://lanxerz.github.io` |
+| `ALLOWED_HOSTS` | Hosts permitidos | `sistemadeinventario-ard-api.onrender.com` |
 
 ## Contribución
 

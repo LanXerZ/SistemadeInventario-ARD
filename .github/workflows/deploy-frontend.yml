@@ -37,6 +37,7 @@ jobs:
         working-directory: frontend
         env:
           VITE_BASE_PATH: /SistemadeInventario-ARD/
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
         run: npm run build
 
       - name: Setup Pages

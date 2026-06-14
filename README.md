@@ -161,9 +161,14 @@ El frontend estará disponible en `http://localhost:5173/`.
 
 ## Despliegue
 
+El proyecto usa una arquitectura dividida:
+
+- **Frontend:** GitHub Pages (estático)
+- **Backend:** Render (Python/Django + PostgreSQL)
+
 ### Frontend en GitHub Pages
 
-El frontend está configurado para desplegarse automáticamente en GitHub Pages desde la rama `main`.
+El frontend se despliega automáticamente en GitHub Pages cada vez que se hace push a `main`.
 
 **URL actual:** `https://lanxerz.github.io/SistemadeInventario-ARD/`
 
@@ -173,35 +178,65 @@ El frontend está configurado para desplegarse automáticamente en GitHub Pages 
 2. En **Source** selecciona **GitHub Actions**.
 3. El workflow `.github/workflows/deploy-frontend.yml` se encargará del resto.
 
-#### Consideraciones importantes
+### Backend en Render
 
-- GitHub Pages sirve solo contenido estático; **no ejecuta Python**.
-- El backend debe estar desplegado en otro servicio.
-- El frontend usa `VITE_API_URL` para saber dónde está el backend. En producción se configura en el workflow.
+El backend se despliega automáticamente en Render cada vez que se hace push a `main`.
 
-### Backend en Render (recomendado)
+#### Paso 1: Crear el servicio en Render
 
-El repositorio incluye `render.yaml` para desplegar el backend con un clic.
-
-1. Crea una cuenta en [Render](https://render.com/).
-2. Desde el dashboard de Render, selecciona **New → Blueprint**.
+1. Inicia sesión en [Render](https://render.com/) con GitHub.
+2. Desde el dashboard, selecciona **New → Blueprint**.
 3. Conecta el repositorio `LanXerZ/SistemadeInventario-ARD`.
-4. Render creará automáticamente:
-   - Web service para el backend (Django + Gunicorn)
-   - Base de datos PostgreSQL
-   - Variables de entorno necesarias
-5. Una vez desplegado, copia la URL del backend (ej. `https://sistemadeinventario-ard-api.onrender.com`).
-6. Actualiza la variable `VITE_API_URL` en `.github/workflows/deploy-frontend.yml` con la URL real.
+4. Render leerá el archivo `render.yaml` y creará:
+   - Web service: `sistemadeinventario-ard-api`
+   - Base de datos PostgreSQL: `sistemadeinventario-ard-db`
+5. Espera a que el deploy inicial termine (puede tardar 5-10 minutos).
+
+#### Paso 2: Crear superusuario en Render
+
+Una vez desplegado, abre la shell del servicio en Render y ejecuta:
+
+```bash
+cd backend
+python manage.py createsuperuser
+python manage.py migrate
+```
+
+#### Paso 3: Configurar secretos en GitHub
+
+Una vez que Render te dé la URL del backend (por ejemplo `https://sistemadeinventario-ard-api.onrender.com`):
+
+1. Ve a **Settings → Secrets and variables → Actions** del repositorio.
+2. Crea un nuevo secret **Repository secret** llamado `VITE_API_URL` con el valor:
+   ```
+   https://sistemadeinventario-ard-api.onrender.com/api/v1
+   ```
+3. (Opcional) Si quieres usar el deploy hook manual en lugar de `autoDeploy`, crea un secret `RENDER_DEPLOY_HOOK` con la URL del deploy hook de Render.
+
+#### Paso 4: Redesplegar frontend
+
+Haz un pequeño cambio en `main` (o ejecuta el workflow manualmente) para que el frontend se reconstruya con la nueva `VITE_API_URL`.
 
 ### Variables de entorno de producción
 
-| Variable | Descripción | Ejemplo |
-|----------|-------------|---------|
-| `SECRET_KEY` | Clave secreta de Django | Generada automáticamente |
-| `DEBUG` | Modo debug | `False` |
-| `DATABASE_URL` | URL de PostgreSQL | Proporcionada por Render |
-| `CORS_ALLOWED_ORIGINS` | Orígenes permitidos | `https://lanxerz.github.io` |
-| `ALLOWED_HOSTS` | Hosts permitidos | `sistemadeinventario-ard-api.onrender.com` |
+| Variable | Descripción | Configurado en |
+|----------|-------------|----------------|
+| `SECRET_KEY` | Clave secreta de Django | Render (generado automáticamente) |
+| `DEBUG` | Modo debug | Render (`False`) |
+| `DATABASE_URL` | URL de PostgreSQL | Render (desde la DB) |
+| `CORS_ALLOWED_ORIGINS` | Orígenes permitidos | Render |
+| `ALLOWED_HOSTS` | Hosts permitidos | Render |
+| `VITE_API_URL` | URL del backend para el frontend | GitHub Secrets |
+
+### Arquitectura de deploy
+
+```
+Push a main
+    ├── Backend: Render Blueprint (autoDeploy)
+    │   └── sistemadeinventario-ard-api.onrender.com
+    └── Frontend: GitHub Actions
+        └── lanxerz.github.io/SistemadeInventario-ARD/
+```
 
 ## Contribución
 

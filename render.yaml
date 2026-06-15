@@ -4,7 +4,7 @@ services:
     runtime: python
     plan: free
     buildCommand: "cd backend && pip install -r requirements.txt && python manage.py collectstatic --noinput"
-    startCommand: "cd backend && python manage.py migrate && (python manage.py create_default_superuser || true) && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT"
+    startCommand: "cd backend && python manage.py migrate && python manage.py reset_default_superuser && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT"
     healthCheckPath: /health/
     envVars:
       - key: PYTHON_VERSION

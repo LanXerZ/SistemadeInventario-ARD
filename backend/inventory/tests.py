@@ -9,18 +9,17 @@ User = get_user_model()
 
 class CategoryModelTest(TestCase):
     def test_create_category(self):
-        category = Category.objects.create(name='Electrónicos', description='Componentes electrónicos')
-        self.assertEqual(str(category), 'Electrónicos')
+        category = Category.objects.create(name='Electronicos', description='Componentes electronicos')
+        self.assertEqual(str(category), 'Electronicos')
 
 
 class ItemModelTest(TestCase):
     def setUp(self):
         self.category = Category.objects.create(name='Resistencias')
         self.item = Item.objects.create(
-            name='Resistencia 10kΩ',
+            name='Resistencia 10kOhm',
             sku='R-10K',
             category=self.category,
-            location='E-01-A-01',
             quantity=5,
             minimum_stock=10,
         )
@@ -51,7 +50,7 @@ class InventoryAPITest(APITestCase):
         self.tecnico = User.objects.create_user(
             email='tecnico@armada.mil.do',
             password='Tecnico123',
-            name='Técnico',
+            name='Tecnico',
             role=User.Role.TECNICO,
         )
         self.category = Category.objects.create(name='Capacitores')
@@ -59,7 +58,6 @@ class InventoryAPITest(APITestCase):
             name='Capacitor 100uF',
             sku='C-100UF',
             category=self.category,
-            location='E-01-A-02',
             quantity=20,
             minimum_stock=5,
         )
@@ -75,7 +73,6 @@ class InventoryAPITest(APITestCase):
             'name': 'Diodo',
             'sku': 'D-001',
             'category': self.category.id,
-            'location': 'E-01-A-03',
             'minimum_stock': 0,
         })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -86,7 +83,6 @@ class InventoryAPITest(APITestCase):
             'name': 'Diodo',
             'sku': 'D-001',
             'category': self.category.id,
-            'location': 'E-01-A-03',
             'minimum_stock': 0,
         })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)

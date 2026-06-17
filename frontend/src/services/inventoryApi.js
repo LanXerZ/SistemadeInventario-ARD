@@ -1,18 +1,24 @@
 import api from './api'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001/api/v1'
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
 
 export const inventoryApi = {
-  // Reports
   downloadInventoryReport: (format = 'pdf') => api.get(`/items/report/?format=${format}`, {
     responseType: 'blob',
   }),
 
-  // Categories
   getCategories: () => api.get('/inventory/categories/'),
+  getCategory: (id) => api.get(`/inventory/categories/${id}/`),
   createCategory: (data) => api.post('/inventory/categories/', data),
+  updateCategory: (id, data) => api.put(`/inventory/categories/${id}/`, data),
+  deleteCategory: (id) => api.delete(`/inventory/categories/${id}/`),
 
-  // Items
+  getLocations: (params = {}) => api.get('/inventory/locations/', { params }),
+  getLocation: (id) => api.get(`/inventory/locations/${id}/`),
+  createLocation: (data) => api.post('/inventory/locations/', data),
+  updateLocation: (id, data) => api.put(`/inventory/locations/${id}/`, data),
+  deleteLocation: (id) => api.delete(`/inventory/locations/${id}/`),
+
   getItems: (params = {}) => api.get('/inventory/items/', { params }),
   getItem: (id) => api.get(`/inventory/items/${id}/`),
   createItem: (formData) => api.post('/inventory/items/', formData, {
@@ -24,7 +30,6 @@ export const inventoryApi = {
   deleteItem: (id) => api.delete(`/inventory/items/${id}/`),
   getCriticalItems: () => api.get('/inventory/items/critical/'),
 
-  // Stock movements
   getStockMovements: (params = {}) => api.get('/inventory/stock-movements/', { params }),
   createStockMovement: (data) => api.post('/inventory/stock-movements/', data),
 }

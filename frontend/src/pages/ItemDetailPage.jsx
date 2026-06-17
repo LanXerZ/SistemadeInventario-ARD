@@ -11,6 +11,7 @@ const documentTypes = [
   { value: 'conduce', label: 'Conduce' },
   { value: 'factura', label: 'Factura' },
   { value: 'directo', label: 'Directo' },
+  { value: 'legado', label: 'Legado' },
 ]
 
 export default function ItemDetailPage() {
@@ -30,6 +31,7 @@ export default function ItemDetailPage() {
     document_type: 'directo',
     document_number: '',
     notes: '',
+    document_file: null,
   })
 
   useEffect(() => {
@@ -59,21 +61,34 @@ export default function ItemDetailPage() {
   }
 
   const handleMovementChange = (e) => {
-    const { name, value } = e.target
-    setMovementForm((prev) => ({ ...prev, [name]: value }))
+    const { name, value, type } = e.target
+    if (type === 'file') {
+      const file = e.target.files[0]
+      if (file && file.size > 5 * 1024 * 1024) {
+        toast.error('El archivo no debe superar los 5MB')
+        e.target.value = ''
+        return
+      }
+      setMovementForm((prev) => ({ ...prev, [name]: file }))
+    } else {
+      setMovementForm((prev) => ({ ...prev, [name]: value }))
+    }
   }
 
   const handleMovementSubmit = async (e) => {
     e.preventDefault()
     try {
-      await inventoryApi.createStockMovement({
-        item: id,
-        movement_type: movementForm.movement_type,
-        quantity: Number(movementForm.quantity),
-        document_type: movementForm.document_type,
-        document_number: movementForm.document_number,
-        notes: movementForm.notes,
-      })
+      const payload = new FormData()
+      payload.append('item', id)
+      payload.append('movement_type', movementForm.movement_type)
+      payload.append('quantity', Number(movementForm.quantity))
+      payload.append('document_type', movementForm.document_type)
+      payload.append('document_number', movementForm.document_number)
+      payload.append('notes', movementForm.notes)
+      if (movementForm.document_file) {
+        payload.append('document_file', movementForm.document_file)
+      }
+      await inventoryApi.createStockMovement(payload)
       toast.success('Movimiento registrado')
       setShowEntryForm(false)
       setMovementForm({
@@ -82,6 +97,7 @@ export default function ItemDetailPage() {
         document_type: 'directo',
         document_number: '',
         notes: '',
+        document_file: null,
       })
       fetchItem()
       fetchMovements()
@@ -117,8 +133,10 @@ export default function ItemDetailPage() {
       <div className="flex items-start justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">{item.name}</h2>
-          <p className="text-gray-600 mt-1">
-            {item.sku || item.part_number || 'Sin código'} · {item.category_name}
+          <p className="text-gray-600 mt-1 font-mono">
+            {item.code && <span className="mr-2">{item.code}</span>}
+            {item.sku && <span className="mr-2">| SKU: {item.sku}</span>}
+            | {item.category_name}
           </p>
         </div>
         <div className="flex items-start gap-4">
@@ -153,7 +171,7 @@ export default function ItemDetailPage() {
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">Ubicación</dt>
-                <dd className="mt-1 text-sm text-gray-900">{item.location}</dd>
+                <dd className="mt-1 text-sm text-gray-900">{item.location_breadcrumb || item.location_display || '—'}</dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">Unidad</dt>
@@ -321,6 +339,16 @@ export default function ItemDetailPage() {
                       value={movementForm.notes}
                       onChange={handleMovementChange}
                       className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Archivo (opcional)</label>
+                    <input
+                      type="file"
+                      name="document_file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={handleMovementChange}
+                      className="mt-1 block w-full text-sm text-gray-700 file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200"
                     />
                   </div>
                   <button

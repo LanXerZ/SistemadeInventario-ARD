@@ -186,15 +186,16 @@ export default function InventoryPage() {
                     >
                       {item.name}
                     </Link>
-                    <p className="text-sm text-gray-500">
-                      {item.sku || item.part_number || 'Sin código'}
+                    <p className="text-sm text-gray-500 font-mono">
+                      {item.code || '—'}
+                      {item.sku && <span className="ml-2">| SKU: {item.sku}</span>}
                     </p>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     {item.category_name}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    {item.location}
+                    {item.location_display || '—'}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     {item.quantity} {item.unit}

@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase
 from rest_framework import status
-from .models import Category, Item, StockMovement
+from .models import Category, Item, StockMovement, Location, Transfer
 
 User = get_user_model()
 
@@ -31,6 +31,79 @@ class ItemModelTest(TestCase):
         self.item.quantity = 20
         self.item.save()
         self.assertFalse(self.item.is_critical)
+
+    def test_item_marca_modelo_serial(self):
+        item = Item.objects.create(
+            name='Radio Harris',
+            sku='HARRIS-001',
+            marca='Harris',
+            modelo='RF-7800V',
+            numero_serie='SN-12345',
+            category=self.category,
+        )
+        self.assertEqual(item.marca, 'Harris')
+        self.assertEqual(item.modelo, 'RF-7800V')
+        self.assertEqual(item.numero_serie, 'SN-12345')
+
+
+class LocationModelTest(TestCase):
+    def test_create_taller_root(self):
+        taller = Location.objects.create(
+            name='Taller de Electrónica',
+            location_type='taller',
+        )
+        self.assertTrue(taller.location_type == 'taller')
+        self.assertIsNone(taller.parent)
+        self.assertIn('Taller', str(taller))
+
+    def test_location_hierarchy(self):
+        taller = Location.objects.create(name='Taller', location_type='taller')
+        base = Location.objects.create(name='Base Naval 27F', location_type='base_naval', parent=taller)
+        unidad = Location.objects.create(name='GC-101', location_type='unidad_naval', parent=base)
+        breadcrumb = unidad.get_breadcrumb()
+        self.assertIn('Taller', breadcrumb)
+        self.assertIn('Base Naval 27F', breadcrumb)
+        self.assertIn('GC-101', breadcrumb)
+
+    def test_invalid_parent_type(self):
+        from rest_framework.exceptions import ValidationError
+        from .serializers import LocationSerializer
+        taller = Location.objects.create(name='Taller', location_type='taller')
+        unidad = Location.objects.create(name='Unidad', location_type='unidad_naval', parent=taller)
+        data = {
+            'name': 'Destacamento Test',
+            'location_type': 'destacamento',
+            'parent': unidad.id,
+        }
+        serializer = LocationSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('parent', serializer.errors)
+
+
+class TransferModelTest(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name='Equipos')
+        self.item = Item.objects.create(name='Radio Test', category=self.category, quantity=1)
+        self.taller = Location.objects.create(name='Taller', location_type='taller')
+        self.base = Location.objects.create(name='Base Naval', location_type='base_naval', parent=self.taller)
+        self.admin = User.objects.create_user(
+            email='admin@test.com',
+            password='Test12345',
+            name='Admin',
+            role=User.Role.ADMIN,
+        )
+
+    def test_create_transfer(self):
+        transfer = Transfer.objects.create(
+            item=self.item,
+            origin_location=self.taller,
+            destination_location=self.base,
+            requested_by=self.admin,
+            quantity=1,
+        )
+        self.assertEqual(transfer.status, Transfer.Status.PENDIENTE)
+        self.assertEqual(transfer.requested_by, self.admin)
+        self.assertIn('→', str(transfer))
 
 
 class InventoryAPITest(APITestCase):
@@ -123,3 +196,37 @@ class InventoryAPITest(APITestCase):
             'document_number': 'CON-002',
         })
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_transfer_and_approve(self):
+        self.client.force_authenticate(user=self.almacenista)
+        taller = Location.objects.create(name='Taller', location_type='taller')
+        base = Location.objects.create(name='Base Naval', location_type='base_naval', parent=taller)
+        self.item.location = taller
+        self.item.save()
+        response = self.client.post('/api/v1/inventory/transfers/', {
+            'item': self.item.id,
+            'origin_location': taller.id,
+            'destination_location': base.id,
+            'quantity': 1,
+        })
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        transfer_id = response.data['id']
+
+        response = self.client.post(f'/api/v1/inventory/transfers/{transfer_id}/approve/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(response.data['status'], 'completada')
+
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.location, base)
+
+    def test_locations_tree(self):
+        self.client.force_authenticate(user=self.tecnico)
+        taller = Location.objects.create(name='Taller', location_type='taller')
+        base = Location.objects.create(name='Base Naval', location_type='base_naval', parent=taller)
+        Location.objects.create(name='GC-101', location_type='unidad_naval', parent=base)
+
+        response = self.client.get('/api/v1/inventory/locations/full_tree/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['name'], 'Taller')
+        self.assertEqual(len(response.data[0]['children']), 1)

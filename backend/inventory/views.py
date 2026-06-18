@@ -1,18 +1,20 @@
 from django.db.models import Q, Max
 from django.http import FileResponse
+from django.utils import timezone
 from datetime import datetime
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend, FilterSet, NumberFilter
 from utils.reports import build_report
-from .models import Category, Location, Item, StockMovement
+from .models import Category, Location, Item, StockMovement, Transfer
 from .serializers import (
     CategorySerializer,
     LocationSerializer,
     ItemListSerializer,
     ItemDetailSerializer,
     StockMovementSerializer,
+    TransferSerializer,
 )
 from .permissions import IsAlmacenistaOrAdmin
 
@@ -38,7 +40,7 @@ class LocationViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, IsAlmacenistaOrAdmin]
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = super().get_queryset().select_related('parent')
         location_type = self.request.query_params.get('location_type')
         parent = self.request.query_params.get('parent')
 
@@ -52,11 +54,36 @@ class LocationViewSet(viewsets.ModelViewSet):
 
         return queryset
 
+    def perform_destroy(self, instance):
+        if instance.has_items:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError(
+                'No se puede eliminar la ubicación porque tiene artículos o sub-ubicaciones asociadas.'
+            )
+        instance.delete()
+
     @action(detail=False, methods=['get'])
     def roots(self, request):
         roots = self.queryset.filter(parent__isnull=True)
         serializer = self.get_serializer(roots, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def tree(self, request, pk=None):
+        location = self.get_object()
+        tree = self._build_tree(location)
+        return Response(tree)
+
+    def _build_tree(self, location):
+        data = self.get_serializer(location).data
+        data['children'] = [self._build_tree(child) for child in location.children.all()]
+        return data
+
+    @action(detail=False, methods=['get'])
+    def full_tree(self, request):
+        roots = self.get_queryset().filter(parent__isnull=True)
+        tree = [self._build_tree(root) for root in roots]
+        return Response(tree)
 
 
 class ItemViewSet(viewsets.ModelViewSet):
@@ -174,3 +201,79 @@ class StockMovementViewSet(viewsets.ModelViewSet):
             item.quantity -= movement.quantity
 
         item.save(update_fields=['quantity'])
+
+
+class TransferFilter(FilterSet):
+    item = NumberFilter(field_name='item__id')
+    origin_location = NumberFilter(field_name='origin_location__id')
+    destination_location = NumberFilter(field_name='destination_location__id')
+    requested_by = NumberFilter(field_name='requested_by__id')
+    approved_by = NumberFilter(field_name='approved_by__id')
+
+    class Meta:
+        model = Transfer
+        fields = ['item', 'origin_location', 'destination_location', 'status',
+                  'requested_by', 'approved_by']
+
+
+class TransferViewSet(viewsets.ModelViewSet):
+    queryset = Transfer.objects.select_related(
+        'item', 'origin_location', 'destination_location',
+        'requested_by', 'approved_by',
+    ).all()
+    serializer_class = TransferSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAlmacenistaOrAdmin]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = TransferFilter
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        item_id = self.request.query_params.get('item')
+        if item_id:
+            queryset = queryset.filter(item_id=item_id)
+        return queryset
+
+    def perform_create(self, serializer):
+        serializer.save(requested_by=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        transfer = self.get_object()
+        if transfer.status != Transfer.Status.PENDIENTE:
+            return Response(
+                {'detail': 'Solo se pueden aprobar traslados pendientes.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not request.user.role in ('admin', 'almacenista'):
+            return Response(
+                {'detail': 'No tiene permisos para aprobar traslados.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        transfer.status = Transfer.Status.COMPLETADA
+        transfer.approved_by = request.user
+        transfer.completed_at = timezone.now()
+        transfer.item.location = transfer.destination_location
+        transfer.item.save(update_fields=['location'])
+        transfer.save()
+        return Response(self.get_serializer(transfer).data)
+
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        transfer = self.get_object()
+        if transfer.status != Transfer.Status.PENDIENTE:
+            return Response(
+                {'detail': 'Solo se pueden rechazar traslados pendientes.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not request.user.role in ('admin', 'almacenista'):
+            return Response(
+                {'detail': 'No tiene permisos para rechazar traslados.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        transfer.status = Transfer.Status.RECHAZADA
+        transfer.approved_by = request.user
+        transfer.completed_at = timezone.now()
+        transfer.notes = (transfer.notes + '\n' if transfer.notes else '') + \
+            f"Rechazado por {request.user.name}"
+        transfer.save()
+        return Response(self.get_serializer(transfer).data)

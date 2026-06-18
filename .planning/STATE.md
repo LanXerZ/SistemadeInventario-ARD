@@ -1,7 +1,7 @@
 # State: Sistema de Inventario del Taller de Electrónica - Armada RD
 
 **Project:** Taller de Electrónica - Armada RD
-**Current phase:** Post-MVP Improvements
+**Current phase:** Post-MVP Improvements — Production Deployed
 **Status:** In Progress
 
 ## Project Reference
@@ -66,17 +66,29 @@ See: `.planning/PROJECT.md` (updated 2026-06-13)
 - [x] Global search across inventory, work orders, and tools
 - [x] Enhanced dashboard with statistics and charts
 - [x] Per-object audit history tabs
-- [x] 34 passing backend tests
+- [x] 35 passing backend tests
+
+### Production Deploy (Completed)
+- [x] Backend deployed to Render: https://sistemadeinventario-ard-api.onrender.com/
+- [x] PostgreSQL database provisioned on Render
+- [x] Frontend deployed to GitHub Pages: https://lanxerz.github.io/SistemadeInventario-ARD/
+- [x] Public `/health/` endpoint for Render health checks
+- [x] `render.yaml` configured with correct CORS origins, SSL redirect disabled, robust start command
+- [x] Default superuser managed via `DEFAULT_ADMIN_PASSWORD` env var using `ensure_default_superuser`
+- [x] GitHub Pages source set to GitHub Actions for Vite build deployment
 
 ## Next Steps
 
-1. Implement low-priority technical improvements:
-   - Frontend E2E tests
-   - PostgreSQL production setup
-   - Automated backups
-   - API rate limiting
-2. Deploy to production
-3. User acceptance testing
+1. **Frontend improvements:**
+   - Add a Categories management page so users can create/edit/delete categories without using Django admin.
+   - Force password change on first login.
+2. **Technical improvements:**
+   - Frontend E2E tests.
+   - API rate limiting.
+   - Automated database backups.
+   - Enhanced monitoring for Render service.
+3. **Documentation:**
+   - Update runbooks for common production issues.
 
 ## Blockers
 
@@ -85,8 +97,9 @@ None.
 ## Notes
 
 - Stack decision: React 18 + Vite + TailwindCSS frontend, Django REST + Python backend, PostgreSQL database.
+- Production deploy stack: Render (Django backend + PostgreSQL) + GitHub Pages (Vite frontend via GitHub Actions).
 - Design-driven development: `DESIGN.md` must be approved before implementation begins.
 - Spec-driven development: `REQUIREMENTS.md` and `ROADMAP.md` are the source of truth for phases.
 
 ---
-*State updated: 2026-06-13 after implementing medium-priority improvements*
+*State updated: 2026-06-15 after production deploy and backend/frontend stabilization*

@@ -12,6 +12,7 @@ const documentTypes = [
 ]
 
 const locationTypes = [
+  { value: 'taller', label: 'Taller de Electrónica' },
   { value: 'base_naval', label: 'Base Naval' },
   { value: 'unidad_naval', label: 'Unidad Naval' },
   { value: 'comandancia', label: 'Comandancia / Capitanía' },
@@ -34,6 +35,9 @@ export default function ItemFormPage() {
     name: '',
     sku: '',
     part_number: '',
+    marca: '',
+    modelo: '',
+    numero_serie: '',
     category: '',
     description: '',
     application: '',
@@ -92,6 +96,9 @@ export default function ItemFormPage() {
         name: data.name,
         sku: data.sku || '',
         part_number: data.part_number || '',
+        marca: data.marca || '',
+        modelo: data.modelo || '',
+        numero_serie: data.numero_serie || '',
         category: data.category,
         description: data.description || '',
         application: data.application || '',
@@ -213,6 +220,9 @@ export default function ItemFormPage() {
     data.append('name', formData.name)
     data.append('sku', formData.sku || '')
     data.append('part_number', formData.part_number || '')
+    data.append('marca', formData.marca || '')
+    data.append('modelo', formData.modelo || '')
+    data.append('numero_serie', formData.numero_serie || '')
     data.append('category', formData.category)
     data.append('description', formData.description || '')
     data.append('application', formData.application || '')
@@ -322,6 +332,39 @@ export default function ItemFormPage() {
               value={formData.part_number}
               onChange={handleChange}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-brand-700 focus:outline-none focus:ring-brand-700"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Marca</label>
+            <input
+              name="marca"
+              value={formData.marca}
+              onChange={handleChange}
+              placeholder="Ej: Motorola, Harris"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-brand-700 focus:outline-none focus:ring-brand-700"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Modelo</label>
+            <input
+              name="modelo"
+              value={formData.modelo}
+              onChange={handleChange}
+              placeholder="Modelo del fabricante"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-brand-700 focus:outline-none focus:ring-brand-700"
+            />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-gray-700">Número de serie</label>
+            <input
+              name="numero_serie"
+              value={formData.numero_serie}
+              onChange={handleChange}
+              placeholder="Para equipos con serial único"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-brand-700 focus:outline-none focus:ring-brand-700 font-mono"
             />
           </div>
 

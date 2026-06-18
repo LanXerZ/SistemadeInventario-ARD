@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator
+from django.conf import settings
 
 
 class Category(models.Model):
@@ -19,12 +20,26 @@ class Category(models.Model):
 
 class Location(models.Model):
     class LocationType(models.TextChoices):
+        TALLER = 'taller', 'Taller de Electrónica'
         BASE_NAVAL = 'base_naval', 'Base Naval'
         UNIDAD_NAVAL = 'unidad_naval', 'Unidad Naval'
         COMANDANCIA = 'comandancia', 'Comandancia / Capitanía'
         DESTACAMENTO = 'destacamento', 'Destacamento / Puesto'
 
+    PARENT_TYPE_MAP = {
+        'base_naval': None,
+        'unidad_naval': 'base_naval',
+        'comandancia': None,
+        'destacamento': 'comandancia',
+        'taller': None,
+    }
+
     name = models.CharField(max_length=200)
+    codigo = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text='Código interno de referencia (opcional)',
+    )
     location_type = models.CharField(
         max_length=20,
         choices=LocationType.choices,
@@ -37,6 +52,7 @@ class Location(models.Model):
         related_name='children',
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = 'ubicación'
@@ -53,6 +69,10 @@ class Location(models.Model):
             parts.insert(0, parent.name)
             parent = parent.parent
         return ' > '.join(parts)
+
+    @property
+    def has_items(self):
+        return self.items.exists() or self.children.exists()
 
 
 class Item(models.Model):
@@ -79,6 +99,21 @@ class Item(models.Model):
         help_text='SKU del sistema anterior (legado)',
     )
     part_number = models.CharField(max_length=100, blank=True)
+    marca = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text='Marca del fabricante (opcional, ej: Motorola, Harris)',
+    )
+    modelo = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text='Modelo del fabricante (opcional)',
+    )
+    numero_serie = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text='Número de serie del activo (opcional)',
+    )
     category = models.ForeignKey(
         Category,
         on_delete=models.PROTECT,
@@ -164,3 +199,77 @@ class StockMovement(models.Model):
 
     def __str__(self):
         return f"{self.get_movement_type_display()} {self.quantity} x {self.item.name}"
+
+
+class Transfer(models.Model):
+    class Status(models.TextChoices):
+        PENDIENTE = 'pendiente', 'Pendiente'
+        EN_TRANSITO = 'en_transito', 'En tránsito'
+        COMPLETADA = 'completada', 'Completada'
+        RECHAZADA = 'rechazada', 'Rechazada'
+
+    item = models.ForeignKey(
+        Item,
+        on_delete=models.PROTECT,
+        related_name='transfers',
+    )
+    origin_location = models.ForeignKey(
+        Location,
+        on_delete=models.PROTECT,
+        related_name='transfers_origin',
+        null=True,
+        blank=True,
+        help_text='Ubicación de origen (nulo si es asignación inicial)',
+    )
+    destination_location = models.ForeignKey(
+        Location,
+        on_delete=models.PROTECT,
+        related_name='transfers_destination',
+    )
+    quantity = models.PositiveIntegerField(
+        default=1,
+        validators=[MinValueValidator(1)],
+    )
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='transfers_requested',
+    )
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='transfers_approved',
+        null=True,
+        blank=True,
+        help_text='Almacenista que aprobó el traslado',
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDIENTE,
+    )
+    document_type = models.CharField(
+        max_length=20,
+        blank=True,
+        choices=StockMovement.DocumentType.choices,
+    )
+    document_number = models.CharField(max_length=100, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'traslado'
+        verbose_name_plural = 'traslados'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['item', '-created_at']),
+            models.Index(fields=['origin_location', '-created_at']),
+            models.Index(fields=['destination_location', '-created_at']),
+            models.Index(fields=['status', '-created_at']),
+        ]
+
+    def __str__(self):
+        origin = self.origin_location.name if self.origin_location else 'Inicial'
+        return f"{self.item.name}: {origin} → {self.destination_location.name}"

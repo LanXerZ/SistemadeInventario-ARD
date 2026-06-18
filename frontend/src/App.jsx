@@ -17,6 +17,8 @@ import AuditPage from './pages/AuditPage'
 import UsersPage from './pages/UsersPage'
 import UserFormPage from './pages/UserFormPage'
 import CategoriesPage from './pages/CategoriesPage'
+import LocationsPage from './pages/LocationsPage'
+import PrintLabelPage from './pages/PrintLabelPage'
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, loading } = useAuth()
@@ -93,6 +95,22 @@ export default function App() {
         element={
           <ProtectedRoute>
             <CategoriesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/locations"
+        element={
+          <ProtectedRoute>
+            <LocationsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/inventory/:id/print-label"
+        element={
+          <ProtectedRoute>
+            <PrintLabelPage />
           </ProtectedRoute>
         }
       />

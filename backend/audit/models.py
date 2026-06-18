@@ -26,6 +26,12 @@ class AuditLog(models.Model):
         ordering = ['-timestamp']
         verbose_name = 'registro de auditoría'
         verbose_name_plural = 'registros de auditoría'
+        indexes = [
+            models.Index(fields=['-timestamp']),
+            models.Index(fields=['model_name', 'object_id', '-timestamp']),
+            models.Index(fields=['user', '-timestamp']),
+            models.Index(fields=['action', '-timestamp']),
+        ]
 
     def __str__(self):
         return f"{self.action} {self.model_name} {self.object_id} @ {self.timestamp}"

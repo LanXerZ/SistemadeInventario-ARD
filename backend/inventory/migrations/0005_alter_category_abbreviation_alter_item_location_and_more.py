@@ -5,11 +5,42 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 
+def _postgres_column_exists(cursor, table, column):
+    cursor.execute(
+        "SELECT 1 FROM information_schema.columns WHERE table_name=%s AND column_name=%s",
+        [table, column],
+    )
+    return cursor.fetchone() is not None
+
+
+def _sqlite_column_exists(cursor, table, column):
+    cursor.execute(f"SELECT 1 FROM pragma_table_info('{table}') WHERE name=%s", [column])
+    return cursor.fetchone() is not None
+
+
+def column_exists(cursor, table, column):
+    vendor = cursor.connection.vendor
+    if vendor == 'postgresql':
+        return _postgres_column_exists(cursor, table, column)
+    if vendor == 'sqlite':
+        return _sqlite_column_exists(cursor, table, column)
+    return False
+
+
 def convert_location_to_fk(apps, schema_editor):
     vendor = schema_editor.connection.vendor
     with schema_editor.connection.cursor() as cursor:
+        if column_exists(cursor, 'inventory_item', 'location_id'):
+            return
+        if column_exists(cursor, 'inventory_item', 'location'):
+            if vendor == 'postgresql':
+                cursor.execute('ALTER TABLE inventory_item DROP COLUMN location CASCADE')
+            else:
+                try:
+                    cursor.execute('ALTER TABLE inventory_item DROP COLUMN location')
+                except Exception:
+                    pass
         if vendor == 'postgresql':
-            cursor.execute('ALTER TABLE inventory_item DROP COLUMN IF EXISTS location CASCADE')
             cursor.execute('ALTER TABLE inventory_item ADD COLUMN location_id BIGINT')
             cursor.execute(
                 'ALTER TABLE inventory_item '
@@ -18,7 +49,6 @@ def convert_location_to_fk(apps, schema_editor):
             )
             cursor.execute('CREATE INDEX IF NOT EXISTS inventory_item_location_id_idx ON inventory_item (location_id)')
         else:
-            cursor.execute('ALTER TABLE inventory_item DROP COLUMN IF EXISTS location')
             cursor.execute('ALTER TABLE inventory_item ADD COLUMN location_id INTEGER REFERENCES inventory_location(id) ON DELETE SET NULL')
 
 
@@ -28,11 +58,21 @@ def reverse_convert_location_to_fk(apps, schema_editor):
         if vendor == 'postgresql':
             cursor.execute('ALTER TABLE inventory_item DROP CONSTRAINT IF EXISTS inventory_item_location_id_fkey')
             cursor.execute('DROP INDEX IF EXISTS inventory_item_location_id_idx')
-            cursor.execute('ALTER TABLE inventory_item DROP COLUMN IF EXISTS location_id')
-            cursor.execute("ALTER TABLE inventory_item ADD COLUMN location VARCHAR(100) NOT NULL DEFAULT ''")
+            if column_exists(cursor, 'inventory_item', 'location_id'):
+                cursor.execute('ALTER TABLE inventory_item DROP COLUMN location_id')
+            if not column_exists(cursor, 'inventory_item', 'location'):
+                cursor.execute("ALTER TABLE inventory_item ADD COLUMN location VARCHAR(100) NOT NULL DEFAULT ''")
         else:
-            cursor.execute('ALTER TABLE inventory_item DROP COLUMN IF EXISTS location_id')
-            cursor.execute("ALTER TABLE inventory_item ADD COLUMN location VARCHAR(100) NOT NULL DEFAULT ''")
+            if column_exists(cursor, 'inventory_item', 'location_id'):
+                try:
+                    cursor.execute('ALTER TABLE inventory_item DROP COLUMN location_id')
+                except Exception:
+                    pass
+            if not column_exists(cursor, 'inventory_item', 'location'):
+                try:
+                    cursor.execute("ALTER TABLE inventory_item ADD COLUMN location VARCHAR(100) NOT NULL DEFAULT ''")
+                except Exception:
+                    pass
 
 
 class Migration(migrations.Migration):

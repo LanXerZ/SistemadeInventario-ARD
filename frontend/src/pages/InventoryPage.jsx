@@ -9,14 +9,17 @@ import { useAuth } from '../context/AuthContext'
 export default function InventoryPage() {
   const [items, setItems] = useState([])
   const [categories, setCategories] = useState([])
+  const [locations, setLocations] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
+  const [locationFilter, setLocationFilter] = useState('')
   const { user } = useAuth()
   const canEdit = user?.role === 'admin' || user?.role === 'almacenista'
 
   useEffect(() => {
     fetchCategories()
+    fetchLocations()
     fetchItems()
   }, [])
 
@@ -29,12 +32,22 @@ export default function InventoryPage() {
     }
   }
 
+  const fetchLocations = async () => {
+    try {
+      const { data } = await inventoryApi.getLocations()
+      setLocations(data.results || data)
+    } catch (error) {
+      console.error('Failed to fetch locations', error)
+    }
+  }
+
   const fetchItems = async () => {
     setLoading(true)
     try {
       const params = {}
       if (search) params.search = search
       if (categoryFilter) params.category = categoryFilter
+      if (locationFilter) params.location = locationFilter
       const { data } = await inventoryApi.getItems(params)
       setItems(data.results || data)
     } catch (error) {
@@ -123,6 +136,18 @@ export default function InventoryPage() {
             </option>
           ))}
         </select>
+        <select
+          value={locationFilter}
+          onChange={(e) => setLocationFilter(e.target.value)}
+          className="rounded-md border border-gray-300 px-3 py-2 focus:border-brand-700 focus:outline-none focus:ring-brand-700"
+        >
+          <option value="">Todas las ubicaciones</option>
+          {locations.map((loc) => (
+            <option key={loc.id} value={loc.id}>
+              {loc.breadcrumb || loc.name}
+            </option>
+          ))}
+        </select>
         <button
           onClick={fetchItems}
           className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -146,6 +171,12 @@ export default function InventoryPage() {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Categoría
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Marca/Modelo
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  Serial
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Ubicación
@@ -186,15 +217,23 @@ export default function InventoryPage() {
                     >
                       {item.name}
                     </Link>
-                    <p className="text-sm text-gray-500">
-                      {item.sku || item.part_number || 'Sin código'}
+                    <p className="text-sm text-gray-500 font-mono">
+                      {item.code || '—'}
+                      {item.sku && <span className="ml-2">| SKU: {item.sku}</span>}
                     </p>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     {item.category_name}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    {item.location}
+                    {item.marca || '—'}
+                    {item.modelo && <span className="text-gray-500"> / {item.modelo}</span>}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-900 font-mono">
+                    {item.numero_serie || '—'}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    {item.location_display || '—'}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     {item.quantity} {item.unit}
@@ -232,7 +271,7 @@ export default function InventoryPage() {
               {items.length === 0 && (
                 <tr>
                   <td
-                    colSpan={canEdit ? 7 : 6}
+                    colSpan={canEdit ? 9 : 8}
                     className="px-6 py-8 text-center text-sm text-gray-500"
                   >
                     No se encontraron artículos.

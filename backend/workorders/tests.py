@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase
 from rest_framework import status
-from inventory.models import Category, Item
+from inventory.models import Category, Item, Location
 from .models import WorkOrder, WorkOrderPart
 
 User = get_user_model()
@@ -73,11 +73,12 @@ class WorkOrderAPITest(APITestCase):
             role=User.Role.TECNICO,
         )
         self.category = Category.objects.create(name='Electrónicos')
+        self.location = Location.objects.create(name='Estante E-01', location_type='taller')
         self.item = Item.objects.create(
             name='Capacitor',
             sku='C-001',
             category=self.category,
-            location='E-01',
+            location=self.location,
             quantity=10,
             minimum_stock=2,
         )

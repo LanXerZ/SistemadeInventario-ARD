@@ -8,6 +8,8 @@ import {
   UsersIcon,
   ArrowRightOnRectangleIcon,
   ShieldCheckIcon,
+  TagIcon,
+  MapPinIcon,
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../context/AuthContext'
 import { workOrderApi } from '../services/workOrderApi'
@@ -17,6 +19,8 @@ import GlobalSearch from './GlobalSearch'
 const navigation = [
   { name: 'Inicio', href: '/', icon: HomeIcon },
   { name: 'Inventario', href: '/inventory', icon: CubeIcon },
+  { name: 'Ubicaciones', href: '/locations', icon: MapPinIcon },
+  { name: 'Categorías', href: '/categories', icon: TagIcon },
   { name: 'Órdenes', href: '/workorders', icon: ClipboardDocumentListIcon, notify: true },
   { name: 'Herramientas', href: '/tools', icon: WrenchIcon },
   { name: 'Auditoría', href: '/audit', icon: ShieldCheckIcon, adminOnly: true },

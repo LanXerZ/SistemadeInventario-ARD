@@ -55,35 +55,12 @@ class LocationViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_destroy(self, instance):
-        if instance.has_items:
+        if instance.items.exists():
             from rest_framework.exceptions import ValidationError
             raise ValidationError(
-                'No se puede eliminar la ubicación porque tiene artículos o sub-ubicaciones asociadas.'
+                'No se puede eliminar la ubicación porque tiene artículos asociados.'
             )
         instance.delete()
-
-    @action(detail=False, methods=['get'])
-    def roots(self, request):
-        roots = self.queryset.filter(parent__isnull=True)
-        serializer = self.get_serializer(roots, many=True)
-        return Response(serializer.data)
-
-    @action(detail=True, methods=['get'])
-    def tree(self, request, pk=None):
-        location = self.get_object()
-        tree = self._build_tree(location)
-        return Response(tree)
-
-    def _build_tree(self, location):
-        data = self.get_serializer(location).data
-        data['children'] = [self._build_tree(child) for child in location.children.all()]
-        return data
-
-    @action(detail=False, methods=['get'])
-    def full_tree(self, request):
-        roots = self.get_queryset().filter(parent__isnull=True)
-        tree = [self._build_tree(root) for root in roots]
-        return Response(tree)
 
 
 class ItemViewSet(viewsets.ModelViewSet):

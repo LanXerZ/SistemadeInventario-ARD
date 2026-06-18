@@ -19,11 +19,6 @@ const locationTypes = [
   { value: 'destacamento', label: 'Destacamento / Puesto' },
 ]
 
-const LOCATION_PARENT_MAP = {
-  unidad_naval: { parentType: 'base_naval', label: 'Base Naval' },
-  destacamento: { parentType: 'comandancia', label: 'Comandancia' },
-}
-
 export default function ItemFormPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -41,8 +36,6 @@ export default function ItemFormPage() {
     category: '',
     description: '',
     application: '',
-    location_type: '',
-    location_parent: '',
     location: '',
     minimum_stock: 0,
     unit: 'unidad',
@@ -58,9 +51,8 @@ export default function ItemFormPage() {
     document_file: null,
   })
   const [locations, setLocations] = useState([])
-  const [parentLocations, setParentLocations] = useState([])
   const [locationModalOpen, setLocationModalOpen] = useState(false)
-  const [newLocation, setNewLocation] = useState({ name: '', location_type: 'base_naval', parent: '' })
+  const [newLocation, setNewLocation] = useState({ name: '', codigo: '', location_type: 'taller' })
   const [savingLocation, setSavingLocation] = useState(false)
 
   useEffect(() => {
@@ -80,9 +72,9 @@ export default function ItemFormPage() {
     }
   }
 
-  const fetchLocations = async (params = {}) => {
+  const fetchLocations = async () => {
     try {
-      const { data } = await inventoryApi.getLocations(params)
+      const { data } = await inventoryApi.getLocations()
       setLocations(data.results || data)
     } catch {
       console.error('Error fetching locations')
@@ -124,27 +116,6 @@ export default function ItemFormPage() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }))
-  }
-
-  const handleLocationTypeChange = (e) => {
-    const location_type = e.target.value
-    setFormData((prev) => ({ ...prev, location_type, location_parent: '', location: '' }))
-    const parentConfig = LOCATION_PARENT_MAP[location_type]
-    if (parentConfig) {
-      fetchLocations({ location_type: parentConfig.parentType })
-      setParentLocations([])
-    } else {
-      fetchLocations({ location_type })
-      setParentLocations([])
-    }
-  }
-
-  const handleLocationParentChange = (e) => {
-    const location_parent = e.target.value
-    setFormData((prev) => ({ ...prev, location_parent, location: '' }))
-    if (location_parent) {
-      fetchLocations({ parent: location_parent })
-    }
   }
 
   const handleLocationChange = (e) => {
@@ -190,26 +161,22 @@ export default function ItemFormPage() {
 
     setSavingLocation(true)
     try {
-      const payload = { ...newLocation }
-      if (!newLocation.parent) {
-        delete payload.parent
+      const payload = {
+        name: newLocation.name,
+        codigo: newLocation.codigo || '',
+        location_type: newLocation.location_type,
       }
       const { data } = await inventoryApi.createLocation(payload)
       toast.success('Ubicación creada')
       setLocationModalOpen(false)
-      setNewLocation({ name: '', location_type: 'base_naval', parent: '' })
-
-      const location_type = data.location_type
-      const parentConfig = LOCATION_PARENT_MAP[location_type]
-      if (parentConfig) {
-        fetchLocations({ location_type: parentConfig.parentType })
-      } else {
-        fetchLocations({ location_type })
-      }
-
+      setNewLocation({ name: '', codigo: '', location_type: 'taller' })
+      fetchLocations()
       setFormData((prev) => ({ ...prev, location: data.id }))
     } catch (error) {
-      toast.error('Error al crear la ubicación')
+      const msg = error.response?.data?.name?.[0]
+        || error.response?.data?.detail
+        || 'Error al crear la ubicación'
+      toast.error(msg)
     } finally {
       setSavingLocation(false)
     }
@@ -280,10 +247,6 @@ export default function ItemFormPage() {
   if (loading) {
     return <p className="text-gray-600">Cargando...</p>
   }
-
-  const parentConfig = formData.location_type ? LOCATION_PARENT_MAP[formData.location_type] : null
-  const needsParent = !!parentConfig
-  const showParentSelect = needsParent
 
   return (
     <div className="max-w-2xl">
@@ -399,45 +362,24 @@ export default function ItemFormPage() {
             <label className="block text-sm font-medium text-gray-700">Ubicación</label>
             <div className="mt-1 flex gap-2">
               <select
-                name="location_type"
-                value={formData.location_type}
-                onChange={handleLocationTypeChange}
-                className="rounded-md border border-gray-300 px-3 py-2 focus:border-brand-700 focus:outline-none focus:ring-brand-700"
-              >
-                <option value="">Tipo de ubicación...</option>
-                {locationTypes.map((t) => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </select>
-              {showParentSelect && (
-                <select
-                  name="location_parent"
-                  value={formData.location_parent}
-                  onChange={handleLocationParentChange}
-                  className="rounded-md border border-gray-300 px-3 py-2 focus:border-brand-700 focus:outline-none focus:ring-brand-700"
-                >
-                  <option value="">Seleccione {parentConfig.label}...</option>
-                  {parentLocations.map((loc) => (
-                    <option key={loc.id} value={loc.id}>{loc.name}</option>
-                  ))}
-                </select>
-              )}
-              <select
                 name="location"
                 value={formData.location}
                 onChange={handleLocationChange}
                 className="flex-1 rounded-md border border-gray-300 px-3 py-2 focus:border-brand-700 focus:outline-none focus:ring-brand-700"
               >
-                <option value="">Seleccione ubicación...</option>
+                <option value="">Sin ubicación asignada</option>
                 {locations.map((loc) => (
-                  <option key={loc.id} value={loc.id}>{loc.name}</option>
+                  <option key={loc.id} value={loc.id}>
+                    {loc.type_display ? `${loc.type_display}: ` : ''}{loc.name}
+                    {loc.codigo ? ` (${loc.codigo})` : ''}
+                  </option>
                 ))}
               </select>
               <button
                 type="button"
                 onClick={() => setLocationModalOpen(true)}
                 className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                title="Agregar ubicación"
+                title="Crear nueva ubicación"
               >
                 +
               </button>
@@ -606,7 +548,7 @@ export default function ItemFormPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
                 <select
                   value={newLocation.location_type}
-                  onChange={(e) => setNewLocation({ ...newLocation, location_type: e.target.value, parent: '' })}
+                  onChange={(e) => setNewLocation({ ...newLocation, location_type: e.target.value })}
                   className="block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-brand-700 focus:outline-none focus:ring-brand-700"
                 >
                   {locationTypes.map((t) => (
@@ -614,23 +556,6 @@ export default function ItemFormPage() {
                   ))}
                 </select>
               </div>
-              {LOCATION_PARENT_MAP[newLocation.location_type] && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {LOCATION_PARENT_MAP[newLocation.location_type].label} superior
-                  </label>
-                  <select
-                    value={newLocation.parent}
-                    onChange={(e) => setNewLocation({ ...newLocation, parent: e.target.value })}
-                    className="block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-brand-700 focus:outline-none focus:ring-brand-700"
-                  >
-                    <option value="">Ninguna</option>
-                    {(locations.filter(l => l.location_type === LOCATION_PARENT_MAP[newLocation.location_type].parentType) || []).map((loc) => (
-                      <option key={loc.id} value={loc.id}>{loc.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Nombre <span className="text-red-500">*</span>
@@ -642,6 +567,17 @@ export default function ItemFormPage() {
                   autoFocus
                   placeholder="Ej: Base Naval 27 de Febrero"
                   className="block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-brand-700 focus:outline-none focus:ring-brand-700"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Código interno
+                </label>
+                <input
+                  value={newLocation.codigo}
+                  onChange={(e) => setNewLocation({ ...newLocation, codigo: e.target.value })}
+                  placeholder="Opcional"
+                  className="block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-brand-700 focus:outline-none focus:ring-brand-700 font-mono"
                 />
               </div>
               <div className="flex justify-end gap-3 pt-2">

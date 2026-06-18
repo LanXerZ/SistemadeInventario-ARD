@@ -65,19 +65,13 @@ class LocationModelTest(TestCase):
         self.assertIn('Base Naval 27F', breadcrumb)
         self.assertIn('GC-101', breadcrumb)
 
-    def test_invalid_parent_type(self):
-        from rest_framework.exceptions import ValidationError
-        from .serializers import LocationSerializer
-        taller = Location.objects.create(name='Taller', location_type='taller')
-        unidad = Location.objects.create(name='Unidad', location_type='unidad_naval', parent=taller)
-        data = {
-            'name': 'Destacamento Test',
-            'location_type': 'destacamento',
-            'parent': unidad.id,
-        }
-        serializer = LocationSerializer(data=data)
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('parent', serializer.errors)
+    def test_location_creation(self):
+        taller = Location.objects.create(name='Taller Central', location_type='taller')
+        base = Location.objects.create(name='Base Naval 27F', location_type='base_naval')
+        self.assertEqual(taller.location_type, 'taller')
+        self.assertIsNone(taller.parent)
+        self.assertIsNone(base.parent)
+        self.assertEqual(str(taller), 'Taller de Electrónica - Taller Central')
 
 
 class TransferModelTest(TestCase):
@@ -219,14 +213,12 @@ class InventoryAPITest(APITestCase):
         self.item.refresh_from_db()
         self.assertEqual(self.item.location, base)
 
-    def test_locations_tree(self):
+    def test_locations_list_flat(self):
         self.client.force_authenticate(user=self.tecnico)
-        taller = Location.objects.create(name='Taller', location_type='taller')
-        base = Location.objects.create(name='Base Naval', location_type='base_naval', parent=taller)
-        Location.objects.create(name='GC-101', location_type='unidad_naval', parent=base)
+        Location.objects.create(name='Taller Central', location_type='taller')
+        Location.objects.create(name='Base Naval 27F', location_type='base_naval')
+        Location.objects.create(name='GC-101', location_type='unidad_naval')
 
-        response = self.client.get('/api/v1/inventory/locations/full_tree/')
+        response = self.client.get('/api/v1/inventory/locations/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]['name'], 'Taller')
-        self.assertEqual(len(response.data[0]['children']), 1)
+        self.assertGreaterEqual(len(response.data), 3)

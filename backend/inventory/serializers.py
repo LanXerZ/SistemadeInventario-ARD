@@ -13,43 +13,17 @@ class CategorySerializer(serializers.ModelSerializer):
 class LocationSerializer(serializers.ModelSerializer):
     type_display = serializers.CharField(source='get_location_type_display', read_only=True)
     breadcrumb = serializers.SerializerMethodField()
-    children = serializers.SerializerMethodField()
-    items_count = serializers.SerializerMethodField()
-    has_items = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Location
         fields = [
             'id', 'name', 'codigo', 'location_type', 'type_display', 'parent',
-            'breadcrumb', 'children', 'items_count', 'has_items',
-            'created_at', 'updated_at',
+            'breadcrumb', 'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     def get_breadcrumb(self, obj):
         return obj.get_breadcrumb()
-
-    def get_children(self, obj):
-        children = obj.children.all()
-        return LocationSimpleSerializer(children, many=True).data
-
-    def get_items_count(self, obj):
-        return obj.items.count()
-
-    def validate(self, data):
-        location_type = data.get('location_type', getattr(self.instance, 'location_type', None))
-        parent = data.get('parent', getattr(self.instance, 'parent', None))
-        if location_type and parent and parent.location_type != Location.PARENT_TYPE_MAP.get(location_type):
-            expected_parent_type = Location.PARENT_TYPE_MAP.get(location_type)
-            raise serializers.ValidationError({
-                'parent': f"Una ubicación de tipo '{dict(Location.LocationType.choices)[location_type]}' "
-                          f"requiere un padre de tipo '{dict(Location.LocationType.choices).get(expected_parent_type, 'N/A')}'."
-            })
-        if location_type == 'taller' and parent is not None:
-            raise serializers.ValidationError({
-                'parent': "El Taller de Electrónica no puede tener una ubicación padre."
-            })
-        return data
 
 
 class LocationSimpleSerializer(serializers.ModelSerializer):
@@ -57,7 +31,7 @@ class LocationSimpleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Location
-        fields = ['id', 'name', 'codigo', 'location_type', 'type_display', 'parent']
+        fields = ['id', 'name', 'codigo', 'location_type', 'type_display']
 
 
 class ItemListSerializer(serializers.ModelSerializer):

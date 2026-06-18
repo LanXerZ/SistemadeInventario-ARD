@@ -18,8 +18,6 @@ export const inventoryApi = {
   createLocation: (data) => api.post('/inventory/locations/', data),
   updateLocation: (id, data) => api.put(`/inventory/locations/${id}/`, data),
   deleteLocation: (id) => api.delete(`/inventory/locations/${id}/`),
-  getLocationTree: () => api.get('/inventory/locations/full_tree/'),
-  getLocationSubtree: (id) => api.get(`/inventory/locations/${id}/tree/`),
 
   getItems: (params = {}) => api.get('/inventory/items/', { params }),
   getItem: (id) => api.get(`/inventory/items/${id}/`),

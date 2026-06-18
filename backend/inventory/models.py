@@ -26,14 +26,6 @@ class Location(models.Model):
         COMANDANCIA = 'comandancia', 'Comandancia / Capitanía'
         DESTACAMENTO = 'destacamento', 'Destacamento / Puesto'
 
-    PARENT_TYPE_MAP = {
-        'base_naval': None,
-        'unidad_naval': 'base_naval',
-        'comandancia': None,
-        'destacamento': 'comandancia',
-        'taller': None,
-    }
-
     name = models.CharField(max_length=200)
     codigo = models.CharField(
         max_length=20,
@@ -69,10 +61,6 @@ class Location(models.Model):
             parts.insert(0, parent.name)
             parent = parent.parent
         return ' > '.join(parts)
-
-    @property
-    def has_items(self):
-        return self.items.exists() or self.children.exists()
 
 
 class Item(models.Model):

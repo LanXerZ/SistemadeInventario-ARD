@@ -34,9 +34,11 @@ export default function ItemFormPage() {
     modelo: '',
     numero_serie: '',
     category: '',
+    kind: 'consumible',
     description: '',
     application: '',
     location: '',
+    quantity: 0,
     minimum_stock: 0,
     unit: 'unidad',
     is_active: true,
@@ -92,9 +94,11 @@ export default function ItemFormPage() {
         modelo: data.modelo || '',
         numero_serie: data.numero_serie || '',
         category: data.category,
+        kind: data.kind || 'consumible',
         description: data.description || '',
         application: data.application || '',
         location: data.location || '',
+        quantity: data.quantity || 0,
         minimum_stock: data.minimum_stock,
         unit: data.unit,
         is_active: data.is_active,
@@ -191,6 +195,14 @@ export default function ItemFormPage() {
     data.append('modelo', formData.modelo || '')
     data.append('numero_serie', formData.numero_serie || '')
     data.append('category', formData.category)
+    data.append('kind', formData.kind)
+    if (formData.kind === 'herramienta') {
+      data.append('track_by_serial', 'true')
+      data.append('quantity', 0)
+    } else {
+      data.append('track_by_serial', 'false')
+      data.append('quantity', Number(formData.quantity || 0))
+    }
     data.append('description', formData.description || '')
     data.append('application', formData.application || '')
     if (formData.location) {
@@ -358,6 +370,39 @@ export default function ItemFormPage() {
             </div>
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Tipo de usabilidad *</label>
+            <div className="mt-1 space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="kind"
+                  value="consumible"
+                  checked={formData.kind === 'consumible'}
+                  onChange={handleChange}
+                  className="h-4 w-4 text-brand-800 focus:ring-brand-700"
+                />
+                <span className="text-sm text-gray-700">Consumibles / Repuestos</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="kind"
+                  value="herramienta"
+                  checked={formData.kind === 'herramienta'}
+                  onChange={handleChange}
+                  className="h-4 w-4 text-brand-800 focus:ring-brand-700"
+                />
+                <span className="text-sm text-gray-700">Herramientas / Instrumentos</span>
+              </label>
+            </div>
+            {formData.kind === 'herramienta' && (
+              <p className="mt-1 text-xs text-gray-500">
+                El stock se mide por unidades físicas con serial. La cantidad inicial siempre es 0.
+              </p>
+            )}
+          </div>
+
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700">Ubicación</label>
             <div className="mt-1 flex gap-2">
@@ -386,29 +431,33 @@ export default function ItemFormPage() {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Unidad</label>
-            <input
-              name="unit"
-              value={formData.unit}
-              onChange={handleChange}
-              required
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-brand-700 focus:outline-none focus:ring-brand-700"
-            />
-          </div>
+          {formData.kind === 'consumible' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Unidad</label>
+                <input
+                  name="unit"
+                  value={formData.unit}
+                  onChange={handleChange}
+                  required
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-brand-700 focus:outline-none focus:ring-brand-700"
+                />
+              </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Stock mínimo</label>
-            <input
-              name="minimum_stock"
-              type="number"
-              min="0"
-              value={formData.minimum_stock}
-              onChange={handleChange}
-              required
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-brand-700 focus:outline-none focus:ring-brand-700"
-            />
-          </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Stock mínimo</label>
+                <input
+                  name="minimum_stock"
+                  type="number"
+                  min="0"
+                  value={formData.minimum_stock}
+                  onChange={handleChange}
+                  required
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-brand-700 focus:outline-none focus:ring-brand-700"
+                />
+              </div>
+            </>
+          )}
 
           <div className="flex items-center h-full pt-6">
             <label className="flex items-center gap-2">
@@ -462,7 +511,7 @@ export default function ItemFormPage() {
           </div>
         </div>
 
-        {!isEditing && (
+        {!isEditing && formData.kind === 'consumible' && (
           <div className="border-t border-gray-200 pt-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Entrada inicial de stock</h3>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">

@@ -7,12 +7,10 @@ import InventoryPage from './pages/InventoryPage'
 import ItemFormPage from './pages/ItemFormPage'
 import ItemDetailPage from './pages/ItemDetailPage'
 import DashboardPage from './pages/DashboardPage'
-import WorkOrdersPage from './pages/WorkOrdersPage'
-import WorkOrderFormPage from './pages/WorkOrderFormPage'
-import WorkOrderDetailPage from './pages/WorkOrderDetailPage'
-import ToolsPage from './pages/ToolsPage'
-import ToolFormPage from './pages/ToolFormPage'
-import ToolDetailPage from './pages/ToolDetailPage'
+import DespachosPage from './pages/DespachosPage'
+import DespachoFormPage from './pages/DespachoFormPage'
+import DespachoDetailPage from './pages/DespachoDetailPage'
+import AsignacionesActivasPage from './pages/AsignacionesActivasPage'
 import AuditPage from './pages/AuditPage'
 import UsersPage from './pages/UsersPage'
 import UserFormPage from './pages/UserFormPage'
@@ -118,7 +116,7 @@ export default function App() {
         path="/workorders"
         element={
           <ProtectedRoute>
-            <WorkOrdersPage />
+            <DespachosPage />
           </ProtectedRoute>
         }
       />
@@ -126,7 +124,7 @@ export default function App() {
         path="/workorders/new"
         element={
           <ProtectedRoute>
-            <WorkOrderFormPage />
+            <DespachoFormPage />
           </ProtectedRoute>
         }
       />
@@ -134,7 +132,7 @@ export default function App() {
         path="/workorders/:id"
         element={
           <ProtectedRoute>
-            <WorkOrderDetailPage />
+            <DespachoDetailPage />
           </ProtectedRoute>
         }
       />
@@ -142,39 +140,39 @@ export default function App() {
         path="/workorders/:id/edit"
         element={
           <ProtectedRoute>
-            <WorkOrderFormPage />
+            <DespachoFormPage />
           </ProtectedRoute>
         }
       />
       <Route
-        path="/tools"
+        path="/despachos"
         element={
           <ProtectedRoute>
-            <ToolsPage />
+            <DespachosPage />
           </ProtectedRoute>
         }
       />
       <Route
-        path="/tools/new"
+        path="/despachos/new"
         element={
           <ProtectedRoute>
-            <ToolFormPage />
+            <DespachoFormPage />
           </ProtectedRoute>
         }
       />
       <Route
-        path="/tools/:id"
+        path="/despachos/:id"
         element={
           <ProtectedRoute>
-            <ToolDetailPage />
+            <DespachoDetailPage />
           </ProtectedRoute>
         }
       />
       <Route
-        path="/tools/:id/edit"
+        path="/asignaciones"
         element={
           <ProtectedRoute>
-            <ToolFormPage />
+            <AsignacionesActivasPage />
           </ProtectedRoute>
         }
       />

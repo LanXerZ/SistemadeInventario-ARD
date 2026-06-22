@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+from dirtyfields import DirtyFieldsMixin
 
 
 class UserManager(BaseUserManager):
@@ -20,7 +21,7 @@ class UserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
 
 
-class User(AbstractBaseUser, PermissionsMixin):
+class User(DirtyFieldsMixin, AbstractBaseUser, PermissionsMixin):
     class Role(models.TextChoices):
         ADMIN = 'admin', 'Administrador'
         ALMACENISTA = 'almacenista', 'Encargado de Inventario'

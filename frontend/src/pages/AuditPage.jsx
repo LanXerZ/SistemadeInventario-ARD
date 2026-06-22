@@ -119,10 +119,10 @@ export default function AuditPage() {
               <option value="Location">Ubicación</option>
               <option value="Transfer">Traslado</option>
               <option value="StockMovement">Movimiento de stock</option>
-              <option value="WorkOrder">Orden de trabajo</option>
-              <option value="WorkOrderPart">Repuesto de OT</option>
-              <option value="Tool">Herramienta</option>
-              <option value="ToolLoan">Préstamo de herramienta</option>
+              <option value="Despacho">Despacho</option>
+              <option value="LineaDespacho">Línea de despacho</option>
+              <option value="ItemUnit">Unidad física (herramienta)</option>
+              <option value="ItemLoan">Préstamo de unidad</option>
             </select>
           </div>
           <div>

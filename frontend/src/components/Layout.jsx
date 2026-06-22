@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   HomeIcon,
-  WrenchIcon,
   CubeIcon,
   ClipboardDocumentListIcon,
   UsersIcon,
@@ -10,9 +9,9 @@ import {
   ShieldCheckIcon,
   TagIcon,
   MapPinIcon,
+  ArrowsRightLeftIcon,
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../context/AuthContext'
-import { workOrderApi } from '../services/workOrderApi'
 import SessionTimeout from './SessionTimeout'
 import GlobalSearch from './GlobalSearch'
 
@@ -21,8 +20,8 @@ const navigation = [
   { name: 'Inventario', href: '/inventory', icon: CubeIcon },
   { name: 'Ubicaciones', href: '/locations', icon: MapPinIcon },
   { name: 'Categorías', href: '/categories', icon: TagIcon },
-  { name: 'Órdenes', href: '/workorders', icon: ClipboardDocumentListIcon, notify: true },
-  { name: 'Herramientas', href: '/tools', icon: WrenchIcon },
+  { name: 'Despachos', href: '/despachos', icon: ClipboardDocumentListIcon },
+  { name: 'Asignaciones', href: '/asignaciones', icon: ArrowsRightLeftIcon, staffOnly: true },
   { name: 'Auditoría', href: '/audit', icon: ShieldCheckIcon, adminOnly: true },
   { name: 'Usuarios', href: '/users', icon: UsersIcon, adminOnly: true },
 ]
@@ -30,24 +29,6 @@ const navigation = [
 export default function Layout({ children }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const [pendingParts, setPendingParts] = useState(0)
-
-  useEffect(() => {
-    if (!user) return
-
-    const fetchPendingParts = async () => {
-      try {
-        const { data } = await workOrderApi.getPendingPartsCount()
-        setPendingParts(data.count)
-      } catch (error) {
-        console.error('Failed to fetch pending parts count', error)
-      }
-    }
-
-    fetchPendingParts()
-    const interval = setInterval(fetchPendingParts, 60000) // Refresh every minute
-    return () => clearInterval(interval)
-  }, [user])
 
   const handleLogout = async () => {
     await logout()
@@ -55,6 +36,8 @@ export default function Layout({ children }) {
   }
 
   const isAdmin = user?.role === 'admin'
+  const isAlmacenista = user?.role === 'almacenista'
+  const canSeeStaff = isAdmin || isAlmacenista
 
   return (
     <div className="min-h-screen flex">
@@ -68,6 +51,7 @@ export default function Layout({ children }) {
         <nav className="flex-1 p-4 space-y-1">
           {navigation.map((item) => {
             if (item.adminOnly && !isAdmin) return null
+            if (item.staffOnly && !canSeeStaff) return null
             const Icon = item.icon
             return (
               <Link
@@ -79,11 +63,6 @@ export default function Layout({ children }) {
                   <Icon className="h-5 w-5" />
                   {item.name}
                 </div>
-                {item.notify && pendingParts > 0 && (
-                  <span className="inline-flex items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">
-                    {pendingParts}
-                  </span>
-                )}
               </Link>
             )
           })}

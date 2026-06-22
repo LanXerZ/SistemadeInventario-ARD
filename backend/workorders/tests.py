@@ -1,192 +1,313 @@
+"""Tests del módulo Despachos.
+
+Cubren:
+- Creación de despacho (consumibles)
+- Creación de despacho con herramientas serializadas
+- Validación de stock insuficiente
+- Asignación de unidades (ItemUnit)
+- Cancelación de despacho (reversión de movimientos)
+"""
 from django.test import TestCase
 from django.contrib.auth import get_user_model
-from rest_framework.test import APITestCase
-from rest_framework import status
-from inventory.models import Category, Item, Location
-from .models import WorkOrder, WorkOrderPart
+from rest_framework.test import APIClient
+from inventory.models import Item, ItemUnit, StockMovement, Category, Location, LocationType
+from workorders.models import Despacho, LineaDespacho, Solicitante
+from workorders.services import DispatchService
+
 
 User = get_user_model()
 
 
-class WorkOrderModelTest(TestCase):
+def get_or_create_location_type(code='taller', name='Taller de Electrónica'):
+    lt, _ = LocationType.objects.get_or_create(
+        code=code,
+        defaults={'name': name, 'is_active': True},
+    )
+    return lt
+
+
+class DespachoServiceTest(TestCase):
+    """Tests del servicio DispatchService."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email='admin@armada.mil.do',
+            password='Admin12345',
+            name='Administrador',
+            role='admin',
+        )
+        self.solicitante = Solicitante.objects.create(
+            name='Capitán Pérez',
+            rank='Capitán de Navío',
+        )
+        self.cat, _ = Category.objects.get_or_create(
+            name='Componentes',
+            defaults={'abbreviation': 'COM'},
+        )
+        self.taller, _ = Location.objects.get_or_create(
+            codigo='TC',
+            defaults={'name': 'Taller Central', 'location_type': get_or_create_location_type()},
+        )
+        self.item, _ = Item.objects.get_or_create(
+            code='COM-001',
+            defaults={
+                'name': 'Resistencia 1kΩ',
+                'category': self.cat,
+                'location': self.taller,
+                'quantity': 100,
+                'minimum_stock': 20,
+                'unit': 'unidad',
+            },
+        )
+
+    def test_create_despacho_consumible_deducts_stock(self):
+        """Despacho de consumible descuenta stock y crea StockMovement.EXIT."""
+        initial_qty = self.item.quantity
+        result = DispatchService.create(
+            user=self.user,
+            solicitante_id=self.solicitante.id,
+            unit_id=None,
+            equipment_reference='',
+            notes='',
+            items=[{'item_id': self.item.id, 'quantity': 5, 'item_unit_id': None, 'notes': ''}],
+        )
+        self.assertEqual(result.status, Despacho.Status.ISSUED)
+        self.assertEqual(result.lineas.count(), 1)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.quantity, initial_qty - 5)
+        self.assertEqual(StockMovement.objects.filter(movement_type='exit', item=self.item).count(), 1)
+
+    def test_create_despacho_insufficient_stock_fails(self):
+        """Falla atómicamente si no hay stock suficiente."""
+        from rest_framework.exceptions import ValidationError
+        with self.assertRaises(ValidationError):
+            DispatchService.create(
+                user=self.user,
+                solicitante_id=self.solicitante.id,
+                unit_id=None,
+                equipment_reference='',
+                notes='',
+                items=[{'item_id': self.item.id, 'quantity': 999, 'item_unit_id': None, 'notes': ''}],
+            )
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.quantity, 100)
+
+    def test_create_despacho_herramienta_assigns_unit(self):
+        """Despacho de herramienta asigna ItemUnit (status='asignado'), no descuenta quantity."""
+        from inventory.models import ItemLoan
+        herramienta = Item.objects.create(
+            name='Multímetro Fluke 87V',
+            code='HERR-001',
+            category=self.cat,
+            location=self.taller,
+            kind='herramienta',
+            track_by_serial=True,
+            quantity=0,
+            unit='unidad',
+        )
+        unit = ItemUnit.objects.create(
+            item=herramienta,
+            serial_number='FL-001',
+            status='available',
+        )
+        result = DispatchService.create(
+            user=self.user,
+            solicitante_id=self.solicitante.id,
+            unit_id=None,
+            equipment_reference='',
+            notes='',
+            items=[{'item_id': herramienta.id, 'quantity': 1, 'item_unit_id': unit.id, 'notes': ''}],
+        )
+        self.assertEqual(result.status, Despacho.Status.ISSUED)
+        unit.refresh_from_db()
+        self.assertEqual(unit.status, ItemUnit.Status.ASIGNADO)
+        self.assertEqual(ItemLoan.objects.filter(item_unit=unit, returned_at__isnull=True).count(), 1)
+
+    def test_cancel_despacho_restores_stock(self):
+        """Cancelar un despacho revierte el stock y libera unidades asignadas."""
+        result = DispatchService.create(
+            user=self.user,
+            solicitante_id=self.solicitante.id,
+            unit_id=None,
+            equipment_reference='',
+            notes='',
+            items=[{'item_id': self.item.id, 'quantity': 10, 'item_unit_id': None, 'notes': ''}],
+        )
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.quantity, 90)
+        DispatchService.cancel(despacho=result, user=self.user, reason='Error en OT')
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.quantity, 100)
+        result.refresh_from_db()
+        self.assertEqual(result.status, Despacho.Status.CANCELLED)
+
+    def test_cancel_despacho_herramienta_releases_unit(self):
+        herramienta = Item.objects.create(
+            name='Multímetro',
+            code='HERR-002',
+            category=self.cat,
+            location=self.taller,
+            kind='herramienta',
+            track_by_serial=True,
+            quantity=0,
+        )
+        unit = ItemUnit.objects.create(
+            item=herramienta,
+            serial_number='FL-002',
+            status='available',
+        )
+        result = DispatchService.create(
+            user=self.user,
+            solicitante_id=self.solicitante.id,
+            unit_id=None,
+            equipment_reference='',
+            notes='',
+            items=[{'item_id': herramienta.id, 'quantity': 1, 'item_unit_id': unit.id, 'notes': ''}],
+        )
+        unit.refresh_from_db()
+        self.assertEqual(unit.status, ItemUnit.Status.ASIGNADO)
+        DispatchService.cancel(despacho=result, user=self.user, reason='Cancelar')
+        unit.refresh_from_db()
+        self.assertEqual(unit.status, ItemUnit.Status.AVAILABLE)
+
+
+class DespachoAPITest(TestCase):
+    """Tests de los endpoints de Despacho."""
+
     def setUp(self):
         self.admin = User.objects.create_user(
             email='admin@armada.mil.do',
             password='Admin12345',
             name='Admin',
-            role=User.Role.ADMIN,
+            role='admin',
         )
-        self.technician = User.objects.create_user(
-            email='tecnico@armada.mil.do',
-            password='Tecnico123',
-            name='Técnico',
-            role=User.Role.TECNICO,
-        )
-
-    def test_ot_number_generation(self):
-        wo = WorkOrder.objects.create(
-            origin_unit='BA-1101',
-            delivery_officer_name='Capitán Pérez',
-            equipment_description='Radio VHF',
-            technician=self.technician,
-            created_by=self.admin,
-        )
-        self.assertTrue(wo.ot_number.startswith('OT-'))
-        self.assertIn(str(WorkOrder.generate_ot_number().split('-')[1]), wo.ot_number)
-
-    def test_sequential_ot_numbers(self):
-        wo1 = WorkOrder.objects.create(
-            origin_unit='BA-1101',
-            delivery_officer_name='Capitán Pérez',
-            equipment_description='Radio VHF',
-            technician=self.technician,
-            created_by=self.admin,
-        )
-        wo2 = WorkOrder.objects.create(
-            origin_unit='BA-1102',
-            delivery_officer_name='Capitán Gómez',
-            equipment_description='Radar',
-            technician=self.technician,
-            created_by=self.admin,
-        )
-        self.assertGreater(wo2.ot_number, wo1.ot_number)
-
-
-class WorkOrderAPITest(APITestCase):
-    def setUp(self):
-        self.admin = User.objects.create_user(
-            email='admin@armada.mil.do',
-            password='Admin12345',
-            name='Admin',
-            role=User.Role.ADMIN,
-        )
-        self.almacenista = User.objects.create_user(
-            email='almacenista@armada.mil.do',
+        self.alm = User.objects.create_user(
+            email='alm@armada.mil.do',
             password='Almacen123',
             name='Almacenista',
-            role=User.Role.ALMACENISTA,
+            role='almacenista',
         )
-        self.technician = User.objects.create_user(
-            email='tecnico@armada.mil.do',
-            password='Tecnico123',
-            name='Técnico',
-            role=User.Role.TECNICO,
-        )
-        self.category = Category.objects.create(name='Electrónicos')
-        self.location = Location.objects.create(name='Estante E-01', location_type='taller')
-        self.item = Item.objects.create(
-            name='Capacitor',
-            sku='C-001',
-            category=self.category,
-            location=self.location,
-            quantity=10,
-            minimum_stock=2,
-        )
-        self.work_order = WorkOrder.objects.create(
-            origin_unit='BA-1101',
-            delivery_officer_name='Capitán Pérez',
-            equipment_description='Radio VHF',
-            technician=self.technician,
-            created_by=self.admin,
-        )
-
-    def test_admin_can_create_work_order(self):
+        self.client = APIClient()
         self.client.force_authenticate(user=self.admin)
-        response = self.client.post('/api/v1/work-orders/work-orders/', {
-            'origin_unit': 'BA-1102',
-            'delivery_officer_name': 'Capitán Gómez',
-            'equipment_description': 'Radar',
-            'technician': self.technician.id,
-        })
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(response.data['ot_number'].startswith('OT-'))
-
-    def test_technician_can_only_see_assigned_work_orders(self):
-        other_technician = User.objects.create_user(
-            email='tecnico2@armada.mil.do',
-            password='Tecnico123',
-            name='Técnico 2',
-            role=User.Role.TECNICO,
+        self.solicitante = Solicitante.objects.create(name='Capitán Pérez')
+        self.cat, _ = Category.objects.get_or_create(
+            name='Componentes',
+            defaults={'abbreviation': 'COM'},
         )
-        WorkOrder.objects.create(
-            origin_unit='BA-1103',
-            delivery_officer_name='Capitán López',
-            equipment_description='GPS',
-            technician=other_technician,
-            created_by=self.admin,
+        self.taller, _ = Location.objects.get_or_create(
+            codigo='TC',
+            defaults={'name': 'Taller Central', 'location_type': get_or_create_location_type()},
+        )
+        self.item, _ = Item.objects.get_or_create(
+            code='COM-001',
+            defaults={
+                'name': 'Resistencia 1kΩ',
+                'category': self.cat,
+                'location': self.taller,
+                'quantity': 100,
+                'minimum_stock': 20,
+            },
         )
 
-        self.client.force_authenticate(user=self.technician)
-        response = self.client.get('/api/v1/work-orders/work-orders/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['count'], 1)
+    def test_create_despacho_endpoint(self):
+        response = self.client.post('/api/v1/work-orders/despachos/', {
+            'solicitante_id': self.solicitante.id,
+            'unit_id': None,
+            'equipment_reference': '',
+            'notes': '',
+            'items': [{'item_id': self.item.id, 'quantity': 5, 'item_unit_id': None, 'notes': ''}],
+        }, format='json')
+        self.assertEqual(response.status_code, 201, response.json())
+        data = response.json()
+        self.assertEqual(data['status'], 'issued')
+        self.assertTrue(data['ot_number'].startswith('DV-'))
+        self.assertEqual(data['lineas_count'], 1)
 
-    def test_technician_can_request_part(self):
-        self.client.force_authenticate(user=self.technician)
-        response = self.client.post(
-            f'/api/v1/work-orders/work-orders/{self.work_order.id}/request_part/',
-            {
-                'item': self.item.id,
-                'quantity': 2,
-                'notes': 'Urgente',
-            }
-        )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(WorkOrderPart.objects.count(), 1)
+    def test_create_despacho_without_solicitante_fails(self):
+        response = self.client.post('/api/v1/work-orders/despachos/', {
+            'solicitante_id': None,
+            'items': [{'item_id': self.item.id, 'quantity': 1, 'item_unit_id': None}],
+        }, format='json')
+        self.assertEqual(response.status_code, 400)
 
-    def test_almacenista_can_approve_part(self):
-        part = WorkOrderPart.objects.create(
-            work_order=self.work_order,
-            item=self.item,
-            quantity_requested=2,
-            requested_by=self.technician,
-        )
-        self.client.force_authenticate(user=self.almacenista)
-        response = self.client.post(
-            f'/api/v1/work-orders/work-orders/{self.work_order.id}/approve_part/',
-            {'part_id': part.id}
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        part.refresh_from_db()
-        self.assertEqual(part.status, WorkOrderPart.Status.APPROVED)
+    def test_create_despacho_with_empty_items_fails(self):
+        response = self.client.post('/api/v1/work-orders/despachos/', {
+            'solicitante_id': self.solicitante.id,
+            'items': [],
+        }, format='json')
+        self.assertEqual(response.status_code, 400)
 
-    def test_use_part_deducts_stock(self):
-        part = WorkOrderPart.objects.create(
-            work_order=self.work_order,
-            item=self.item,
-            quantity_requested=2,
-            requested_by=self.technician,
-            status=WorkOrderPart.Status.APPROVED,
-            quantity_approved=2,
-            approved_by=self.almacenista,
+    def test_cancel_despacho_endpoint(self):
+        create_resp = self.client.post('/api/v1/work-orders/despachos/', {
+            'solicitante_id': self.solicitante.id,
+            'items': [{'item_id': self.item.id, 'quantity': 5, 'item_unit_id': None}],
+        }, format='json')
+        self.assertEqual(create_resp.status_code, 201)
+        did = create_resp.json()['id']
+        cancel_resp = self.client.post(
+            f'/api/v1/work-orders/despachos/{did}/cancel/',
+            {'reason': 'Error'},
+            format='json',
         )
-        self.client.force_authenticate(user=self.almacenista)
-        response = self.client.post(
-            f'/api/v1/work-orders/work-orders/{self.work_order.id}/use_part/',
-            {'part_id': part.id}
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(cancel_resp.status_code, 200, cancel_resp.json())
+        self.assertEqual(cancel_resp.json()['status'], 'cancelled')
         self.item.refresh_from_db()
-        self.assertEqual(self.item.quantity, 8)
+        self.assertEqual(self.item.quantity, 100)
 
-    def test_close_work_order(self):
-        self.client.force_authenticate(user=self.admin)
-        response = self.client.post(
-            f'/api/v1/work-orders/work-orders/{self.work_order.id}/close/',
-            {
-                'diagnosis': 'Reemplazo de módulo',
-                'replaced_parts_note': 'Módulo principal',
-            }
+    def test_cancel_without_reason_fails(self):
+        create_resp = self.client.post('/api/v1/work-orders/despachos/', {
+            'solicitante_id': self.solicitante.id,
+            'items': [{'item_id': self.item.id, 'quantity': 5, 'item_unit_id': None}],
+        }, format='json')
+        did = create_resp.json()['id']
+        cancel_resp = self.client.post(
+            f'/api/v1/work-orders/despachos/{did}/cancel/',
+            {'reason': ''},
+            format='json',
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.work_order.refresh_from_db()
-        self.assertEqual(self.work_order.status, WorkOrder.Status.READY)
+        self.assertEqual(cancel_resp.status_code, 400)
 
-    def test_deliver_work_order(self):
-        self.client.force_authenticate(user=self.admin)
-        response = self.client.post(
-            f'/api/v1/work-orders/work-orders/{self.work_order.id}/deliver/'
+    def test_list_despachos(self):
+        self.client.post('/api/v1/work-orders/despachos/', {
+            'solicitante_id': self.solicitante.id,
+            'items': [{'item_id': self.item.id, 'quantity': 1, 'item_unit_id': None}],
+        }, format='json')
+        response = self.client.get('/api/v1/work-orders/despachos/')
+        self.assertEqual(response.status_code, 200)
+        self.assertGreaterEqual(len(response.json()), 1)
+
+
+class SolicitanteAPITest(TestCase):
+    """Tests de los endpoints de Solicitante."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email='admin@armada.mil.do',
+            password='Admin12345',
+            name='Admin',
+            role='admin',
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.work_order.refresh_from_db()
-        self.assertEqual(self.work_order.status, WorkOrder.Status.DELIVERED)
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+    def test_list_solicitantes(self):
+        Solicitante.objects.create(name='Capitán Pérez')
+        response = self.client.get('/api/v1/work-orders/solicitantes/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_search_solicitante(self):
+        Solicitante.objects.create(name='Capitán Pérez', rank='Capitán')
+        Solicitante.objects.create(name='Teniente Gómez', rank='Teniente')
+        response = self.client.get('/api/v1/work-orders/solicitantes/?search=Capitán')
+        self.assertEqual(response.status_code, 200)
+        results = response.json()
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]['name'], 'Capitán Pérez')
+
+    def test_create_solicitante(self):
+        response = self.client.post('/api/v1/work-orders/solicitantes/', {
+            'name': 'Teniente López',
+            'rank': 'Teniente de Navío',
+        }, format='json')
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Solicitante.objects.count(), 1)

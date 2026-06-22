@@ -21,20 +21,19 @@ import {
   CartesianGrid,
 } from 'recharts'
 import { inventoryApi } from '../services/inventoryApi'
-import { toolApi } from '../services/toolApi'
 import { dashboardApi } from '../services/dashboardApi'
 
 const COLORS = ['#1e3a5f', '#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6']
 
 export default function DashboardPage() {
   const [criticalItems, setCriticalItems] = useState([])
-  const [overdueTools, setOverdueTools] = useState([])
+  const [overdueUnits, setOverdueUnits] = useState([])
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetchCriticalItems()
-    fetchOverdueTools()
+    fetchOverdueUnits()
     fetchStats()
   }, [])
 
@@ -47,12 +46,12 @@ export default function DashboardPage() {
     }
   }
 
-  const fetchOverdueTools = async () => {
+  const fetchOverdueUnits = async () => {
     try {
-      const { data } = await toolApi.getOverdueTools()
-      setOverdueTools(data.results || data)
+      const { data } = await inventoryApi.getOverdueUnits()
+      setOverdueUnits(data.results || data)
     } catch (error) {
-      console.error('Failed to fetch overdue tools', error)
+      console.error('Failed to fetch overdue units', error)
     }
   }
 
@@ -71,10 +70,12 @@ export default function DashboardPage() {
     ? Object.entries(stats.work_orders.status_counts).map(([name, value]) => ({ name, value }))
     : []
 
-  const toolsData = stats
+  const despachosRecientes = stats?.work_orders?.recent || []
+
+  const unitsData = stats
     ? [
-        { name: 'Disponibles', value: stats.tools.total - stats.tools.loaned - stats.tools.disposed },
-        { name: 'Prestadas', value: stats.tools.loaned },
+        { name: 'Disponibles', value: stats.tools.available },
+        { name: 'Asignadas', value: stats.tools.loaned },
         { name: 'Dadas de baja', value: stats.tools.disposed },
       ]
     : []
@@ -109,24 +110,24 @@ export default function DashboardPage() {
             />
             <StatCard
               icon={ClipboardDocumentListIcon}
-              label="Órdenes de trabajo"
+              label="Despachos"
               value={stats.work_orders.total}
-              link="/workorders"
-              linkText="Ver órdenes"
+              link="/despachos"
+              linkText="Ver despachos"
             />
             <StatCard
               icon={WrenchIcon}
-              label="Herramientas registradas"
-              value={stats.tools.total}
-              link="/tools"
+              label="Unidades registradas"
+              value={stats.tools.total_units}
+              link="/inventory?kind=herramienta"
               linkText="Ver herramientas"
             />
             <StatCard
               icon={ArrowTrendingUpIcon}
-              label="Repuestos pendientes"
-              value={stats.work_orders.pending_parts}
-              link="/workorders"
-              linkText="Ver pendientes"
+              label="Solicitantes registrados"
+              value={stats.inventory.total_items}
+              link="/despachos/new"
+              linkText="Nuevo despacho"
             />
           </div>
 
@@ -157,10 +158,10 @@ export default function DashboardPage() {
             </div>
 
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Herramientas</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Unidades físicas</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={toolsData}>
+                  <BarChart data={unitsData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                     <YAxis allowDecimals={false} />
@@ -196,34 +197,34 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {stats.work_orders.recent.length > 0 && (
+          {despachosRecientes.length > 0 && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Órdenes recientes</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Despachos recientes</h3>
               <div className="overflow-hidden rounded-md border border-gray-200">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">OT</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Unidad origen</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">DV</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Solicitante</th>
                       <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Estado</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Recibido</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Fecha</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">
-                    {stats.work_orders.recent.map((wo) => (
-                      <tr key={wo.id}>
+                    {despachosRecientes.map((d) => (
+                      <tr key={d.id}>
                         <td className="px-4 py-2 text-sm">
                           <Link
-                            to={`/workorders/${wo.id}`}
+                            to={`/despachos/${d.id}`}
                             className="font-medium text-brand-800 hover:underline"
                           >
-                            {wo.ot_number}
+                            {d.ot_number}
                           </Link>
                         </td>
-                        <td className="px-4 py-2 text-sm text-gray-900">{wo.origin_unit}</td>
-                        <td className="px-4 py-2 text-sm text-gray-900">{wo.status}</td>
+                        <td className="px-4 py-2 text-sm text-gray-900">{d.solicitante}</td>
+                        <td className="px-4 py-2 text-sm text-gray-900">{d.status}</td>
                         <td className="px-4 py-2 text-sm text-gray-900">
-                          {new Date(wo.received_at).toLocaleDateString('es-DO')}
+                          {new Date(d.issued_at).toLocaleDateString('es-DO')}
                         </td>
                       </tr>
                     ))}
@@ -281,34 +282,36 @@ export default function DashboardPage() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center gap-2 mb-4">
           <WrenchIcon className="h-5 w-5 text-orange-600" />
-          <h3 className="text-lg font-medium text-gray-900">Herramientas vencidas</h3>
+          <h3 className="text-lg font-medium text-gray-900">Unidades con préstamo vencido</h3>
         </div>
 
         {loading ? (
           <p className="text-gray-600">Cargando...</p>
-        ) : overdueTools.length === 0 ? (
-          <p className="text-sm text-gray-500">No hay herramientas vencidas.</p>
+        ) : overdueUnits.length === 0 ? (
+          <p className="text-sm text-gray-500">No hay unidades con préstamo vencido.</p>
         ) : (
           <div className="overflow-hidden rounded-md border border-gray-200">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Código</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Nombre</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Item</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Serial</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Asignado a</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
-                {overdueTools.map((tool) => (
-                  <tr key={tool.id}>
+                {overdueUnits.map((unit) => (
+                  <tr key={unit.id}>
                     <td className="px-4 py-2 text-sm">
                       <Link
-                        to={`/tools/${tool.id}`}
+                        to={`/inventory/${unit.item}`}
                         className="font-medium text-brand-800 hover:underline"
                       >
-                        {tool.code}
+                        {unit.item_name}
                       </Link>
                     </td>
-                    <td className="px-4 py-2 text-sm text-gray-900">{tool.name}</td>
+                    <td className="px-4 py-2 text-sm text-gray-900">{unit.serial_number}</td>
+                    <td className="px-4 py-2 text-sm text-gray-900">{unit.active_loan?.recipient?.name || '—'}</td>
                   </tr>
                 ))}
               </tbody>

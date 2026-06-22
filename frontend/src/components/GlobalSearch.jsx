@@ -2,12 +2,11 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { inventoryApi } from '../services/inventoryApi'
-import { workOrderApi } from '../services/workOrderApi'
-import { toolApi } from '../services/toolApi'
+import { despachoApi } from '../services/workOrderApi'
 
 export default function GlobalSearch() {
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState({ items: [], workOrders: [], tools: [] })
+  const [results, setResults] = useState({ items: [], despachos: [] })
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
@@ -34,7 +33,7 @@ export default function GlobalSearch() {
       if (query.length >= 2) {
         performSearch()
       } else {
-        setResults({ items: [], workOrders: [], tools: [] })
+        setResults({ items: [], despachos: [] })
       }
     }, 300)
 
@@ -44,16 +43,14 @@ export default function GlobalSearch() {
   const performSearch = async () => {
     setLoading(true)
     try {
-      const [itemsRes, workOrdersRes, toolsRes] = await Promise.all([
+      const [itemsRes, despachosRes] = await Promise.all([
         inventoryApi.getItems({ search: query, page_size: 5 }),
-        workOrderApi.getWorkOrders({ search: query, page_size: 5 }),
-        toolApi.getTools({ search: query, page_size: 5 }),
+        despachoApi.getDespachos({ search: query, page_size: 5 }),
       ])
 
       setResults({
         items: itemsRes.data.results || itemsRes.data,
-        workOrders: workOrdersRes.data.results || workOrdersRes.data,
-        tools: toolsRes.data.results || toolsRes.data,
+        despachos: despachosRes.data.results || despachosRes.data,
       })
       setIsOpen(true)
     } catch (error) {
@@ -69,7 +66,7 @@ export default function GlobalSearch() {
     setIsOpen(false)
   }
 
-  const hasResults = results.items.length > 0 || results.workOrders.length > 0 || results.tools.length > 0
+  const hasResults = results.items.length > 0 || results.despachos.length > 0
 
   return (
     <div className="relative">
@@ -88,7 +85,7 @@ export default function GlobalSearch() {
           <button
             onClick={() => {
               setQuery('')
-              setResults({ items: [], workOrders: [], tools: [] })
+              setResults({ items: [], despachos: [] })
               inputRef.current?.blur()
             }}
             className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
@@ -123,33 +120,17 @@ export default function GlobalSearch() {
                   </div>
                 )}
 
-                {results.workOrders.length > 0 && (
+                {results.despachos.length > 0 && (
                   <div>
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Órdenes</h4>
-                    {results.workOrders.map((wo) => (
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Despachos</h4>
+                    {results.despachos.map((d) => (
                       <button
-                        key={`wo-${wo.id}`}
-                        onClick={() => handleNavigate(`/workorders/${wo.id}`)}
+                        key={`d-${d.id}`}
+                        onClick={() => handleNavigate(`/despachos/${d.id}`)}
                         className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 rounded"
                       >
-                        <span className="font-medium text-gray-900">{wo.ot_number}</span>
-                        <span className="text-gray-500 text-xs ml-2">{wo.origin_unit}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {results.tools.length > 0 && (
-                  <div>
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Herramientas</h4>
-                    {results.tools.map((tool) => (
-                      <button
-                        key={`tool-${tool.id}`}
-                        onClick={() => handleNavigate(`/tools/${tool.id}`)}
-                        className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 rounded"
-                      >
-                        <span className="font-medium text-gray-900">{tool.name}</span>
-                        <span className="text-gray-500 text-xs ml-2">{tool.code}</span>
+                        <span className="font-medium text-gray-900">{d.ot_number}</span>
+                        <span className="text-gray-500 text-xs ml-2">{d.solicitante_name}</span>
                       </button>
                     ))}
                   </div>

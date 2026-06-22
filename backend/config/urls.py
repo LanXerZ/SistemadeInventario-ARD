@@ -12,7 +12,6 @@ urlpatterns = [
     path('api/v1/dashboard/stats/', dashboard_stats, name='dashboard-stats'),
     path('api/v1/inventory/', include('inventory.urls')),
     path('api/v1/work-orders/', include('workorders.urls')),
-    path('api/v1/tools/', include('tools.urls')),
     path('api/v1/audit/', include('audit.urls')),
     path('api/v1/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/v1/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='docs'),

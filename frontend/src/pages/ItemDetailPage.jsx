@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import {
@@ -6,6 +6,11 @@ import {
   ExclamationTriangleIcon,
   PrinterIcon,
   ArrowsRightLeftIcon,
+  WrenchScrewdriverIcon,
+  PlusIcon,
+  XMarkIcon,
+  PencilSquareIcon,
+  ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline'
 import { inventoryApi, getMediaUrl } from '../services/inventoryApi'
 import { useAuth } from '../context/AuthContext'
@@ -20,6 +25,13 @@ const documentTypes = [
   { value: 'legado', label: 'Legado' },
 ]
 
+const unitStateStyle = {
+  available: 'bg-green-100 text-green-800 border-green-200',
+  asignado: 'bg-amber-100 text-amber-800 border-amber-200',
+  maintenance: 'bg-blue-100 text-blue-800 border-blue-200',
+  disposed: 'bg-gray-100 text-gray-800 border-gray-300',
+}
+
 export default function ItemDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -29,6 +41,7 @@ export default function ItemDetailPage() {
   const [item, setItem] = useState(null)
   const [movements, setMovements] = useState([])
   const [transfers, setTransfers] = useState([])
+  const [units, setUnits] = useState([])
   const [loading, setLoading] = useState(true)
   const [showEntryForm, setShowEntryForm] = useState(false)
   const [activeTab, setActiveTab] = useState('info')
@@ -41,6 +54,18 @@ export default function ItemDetailPage() {
     document_file: null,
   })
 
+  const [showAddUnitModal, setShowAddUnitModal] = useState(false)
+  const [newUnitSerial, setNewUnitSerial] = useState('')
+  const [showStatusModal, setShowStatusModal] = useState(false)
+  const [editingUnit, setEditingUnit] = useState(null)
+  const [newStatus, setNewStatus] = useState('available')
+  const [statusReason, setStatusReason] = useState('')
+
+  const [showReceiveModal, setShowReceiveModal] = useState(false)
+  const [receivingUnit, setReceivingUnit] = useState(null)
+  const [finalStatus, setFinalStatus] = useState('available')
+  const [receiveNotes, setReceiveNotes] = useState('')
+
   useEffect(() => {
     fetchItem()
     fetchMovements()
@@ -51,11 +76,23 @@ export default function ItemDetailPage() {
     try {
       const { data } = await inventoryApi.getItem(id)
       setItem(data)
+      if (data.track_by_serial) {
+        fetchUnits()
+      }
     } catch (error) {
       toast.error('Error al cargar el artículo')
       navigate('/inventory')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchUnits = async () => {
+    try {
+      const { data } = await inventoryApi.getItemUnits({ item: id })
+      setUnits(data.results || data)
+    } catch (error) {
+      console.error('Failed to fetch units', error)
     }
   }
 
@@ -127,6 +164,79 @@ export default function ItemDetailPage() {
     }
   }
 
+  const handleAddUnit = async () => {
+    if (!newUnitSerial.trim()) {
+      toast.error('Debe ingresar un número de serial')
+      return
+    }
+    try {
+      await inventoryApi.addItemUnit(id, { serial_number: newUnitSerial.trim() })
+      toast.success('Unidad agregada')
+      setShowAddUnitModal(false)
+      setNewUnitSerial('')
+      fetchUnits()
+    } catch (err) {
+      const detail = err.response?.data
+      toast.error(typeof detail === 'object' ? JSON.stringify(detail) : 'Error al agregar')
+    }
+  }
+
+  const handleSetStatus = async () => {
+    if (!editingUnit) return
+    try {
+      await inventoryApi.setUnitStatus(editingUnit.id, {
+        status: newStatus,
+        reason: statusReason,
+      })
+      toast.success('Estado actualizado')
+      setShowStatusModal(false)
+      setEditingUnit(null)
+      setNewStatus('available')
+      setStatusReason('')
+      fetchUnits()
+    } catch (err) {
+      const detail = err.response?.data?.detail || 'Error al cambiar estado'
+      toast.error(detail)
+    }
+  }
+
+  const openStatusModal = (unit, currentStatus) => {
+    setEditingUnit(unit)
+    setNewStatus(currentStatus)
+    setStatusReason('')
+    setShowStatusModal(true)
+  }
+
+  const openReceiveModal = (unit) => {
+    setReceivingUnit(unit)
+    setFinalStatus('available')
+    setReceiveNotes('')
+    setShowReceiveModal(true)
+  }
+
+  const handleReceive = async () => {
+    if (!receivingUnit) return
+    if (finalStatus !== 'available' && !receiveNotes.trim()) {
+      toast.error('Indique el motivo para cambiar el estado final.')
+      return
+    }
+    try {
+      await inventoryApi.receiveUnit(receivingUnit.id, {
+        final_status: finalStatus,
+        notes: receiveNotes,
+      })
+      toast.success('Devolución registrada. La unidad vuelve al inventario.')
+      setShowReceiveModal(false)
+      setReceivingUnit(null)
+      setFinalStatus('available')
+      setReceiveNotes('')
+      fetchUnits()
+    } catch (err) {
+      const detail = err.response?.data?.detail || 'Error al recibir la devolución'
+      toast.error(detail)
+    }
+  }
+
   if (loading) {
     return <p className="text-gray-600">Cargando...</p>
   }
@@ -134,6 +244,8 @@ export default function ItemDetailPage() {
   if (!item) {
     return null
   }
+
+  const isTool = item.kind === 'herramienta' && item.track_by_serial
 
   return (
     <div className="space-y-6">
@@ -154,6 +266,12 @@ export default function ItemDetailPage() {
             {item.code && <span className="mr-2">{item.code}</span>}
             {item.sku && <span className="mr-2">| SKU: {item.sku}</span>}
             | {item.category_name}
+            {isTool && (
+              <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-800">
+                <WrenchScrewdriverIcon className="h-3 w-3" />
+                {item.kind_display}
+              </span>
+            )}
           </p>
         </div>
         <div className="flex items-start gap-4">
@@ -164,7 +282,7 @@ export default function ItemDetailPage() {
               className="h-24 w-24 rounded-lg object-cover border border-gray-200"
             />
           )}
-          {item.is_critical && (
+          {item.is_critical && !isTool && (
             <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-800">
               <ExclamationTriangleIcon className="h-4 w-4" />
               Stock crítico
@@ -220,14 +338,18 @@ export default function ItemDetailPage() {
                 <dt className="text-sm font-medium text-gray-500">Ubicación actual</dt>
                 <dd className="mt-1 text-sm text-gray-900">{item.location_breadcrumb || item.location_display || '—'}</dd>
               </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Unidad</dt>
-                <dd className="mt-1 text-sm text-gray-900">{item.unit}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Stock mínimo</dt>
-                <dd className="mt-1 text-sm text-gray-900">{item.minimum_stock}</dd>
-              </div>
+              {!isTool && (
+                <>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Unidad</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{item.unit}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Stock mínimo</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{item.minimum_stock}</dd>
+                  </div>
+                </>
+              )}
               <div>
                 <dt className="text-sm font-medium text-gray-500">Estado</dt>
                 <dd className="mt-1 text-sm text-gray-900">
@@ -240,29 +362,48 @@ export default function ItemDetailPage() {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="border-b border-gray-200">
               <nav className="-mb-px flex" aria-label="Tabs">
-                <button
-                  onClick={() => setActiveTab('movements')}
-                  className={`flex-1 py-4 px-1 text-center border-b-2 text-sm font-medium ${
-                    activeTab === 'movements'
-                      ? 'border-brand-800 text-brand-800'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  Movimientos
-                </button>
-                <button
-                  onClick={() => setActiveTab('transfers')}
-                  className={`flex-1 py-4 px-1 text-center border-b-2 text-sm font-medium ${
-                    activeTab === 'transfers'
-                      ? 'border-brand-800 text-brand-800'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <span className="inline-flex items-center gap-1">
-                    <ArrowsRightLeftIcon className="h-4 w-4" />
-                    Trazabilidad
-                  </span>
-                </button>
+                {!isTool && (
+                  <button
+                    onClick={() => setActiveTab('movements')}
+                    className={`flex-1 py-4 px-1 text-center border-b-2 text-sm font-medium ${
+                      activeTab === 'movements'
+                        ? 'border-brand-800 text-brand-800'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    Movimientos
+                  </button>
+                )}
+                {!isTool && (
+                  <button
+                    onClick={() => setActiveTab('transfers')}
+                    className={`flex-1 py-4 px-1 text-center border-b-2 text-sm font-medium ${
+                      activeTab === 'transfers'
+                        ? 'border-brand-800 text-brand-800'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      <ArrowsRightLeftIcon className="h-4 w-4" />
+                      Trazabilidad
+                    </span>
+                  </button>
+                )}
+                {isTool && (
+                  <button
+                    onClick={() => setActiveTab('units')}
+                    className={`flex-1 py-4 px-1 text-center border-b-2 text-sm font-medium ${
+                      activeTab === 'units'
+                        ? 'border-brand-800 text-brand-800'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      <WrenchScrewdriverIcon className="h-4 w-4" />
+                      Unidades ({units.length})
+                    </span>
+                  </button>
+                )}
                 <button
                   onClick={() => setActiveTab('audit')}
                   className={`flex-1 py-4 px-1 text-center border-b-2 text-sm font-medium ${
@@ -361,6 +502,13 @@ export default function ItemDetailPage() {
                     ))}
                   </div>
                 )
+              ) : activeTab === 'units' ? (
+                <UnitsTab
+                  units={units}
+                  canEdit={canEdit}
+                  onAddUnit={() => setShowAddUnitModal(true)}
+                  onChangeStatus={openStatusModal}
+                />
               ) : (
                 <AuditHistoryTab modelName="inventory.item" objectId={item.id} />
               )}
@@ -369,23 +517,68 @@ export default function ItemDetailPage() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Stock actual</h3>
-            <p className="text-3xl font-bold text-brand-800">
-              {item.quantity} <span className="text-lg font-normal text-gray-600">{item.unit}</span>
-            </p>
-          </div>
+          {!isTool && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Stock actual</h3>
+              <p className="text-3xl font-bold text-brand-800">
+                {item.quantity} <span className="text-lg font-normal text-gray-600">{item.unit}</span>
+              </p>
+            </div>
+          )}
+
+          {isTool && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Unidades físicas</h3>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="rounded-md bg-green-50 p-2 text-center">
+                  <p className="text-xs text-green-700">Disponibles</p>
+                  <p className="text-lg font-bold text-green-900">
+                    {units.filter(u => u.status === 'available').length}
+                  </p>
+                </div>
+                <div className="rounded-md bg-amber-50 p-2 text-center">
+                  <p className="text-xs text-amber-700">Asignadas</p>
+                  <p className="text-lg font-bold text-amber-900">
+                    {units.filter(u => u.status === 'asignado').length}
+                  </p>
+                </div>
+                <div className="rounded-md bg-blue-50 p-2 text-center">
+                  <p className="text-xs text-blue-700">En Reparación</p>
+                  <p className="text-lg font-bold text-blue-900">
+                    {units.filter(u => u.status === 'maintenance').length}
+                  </p>
+                </div>
+                <div className="rounded-md bg-gray-100 p-2 text-center">
+                  <p className="text-xs text-gray-700">Descargadas</p>
+                  <p className="text-lg font-bold text-gray-900">
+                    {units.filter(u => u.status === 'disposed').length}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {canEdit && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Acciones</h3>
               <div className="space-y-3">
-                <button
-                  onClick={() => setShowEntryForm(!showEntryForm)}
-                  className="w-full rounded-md bg-brand-800 px-4 py-2 text-sm font-medium text-white hover:bg-brand-900"
-                >
-                  Registrar movimiento
-                </button>
+                {!isTool && (
+                  <button
+                    onClick={() => setShowEntryForm(!showEntryForm)}
+                    className="w-full rounded-md bg-brand-800 px-4 py-2 text-sm font-medium text-white hover:bg-brand-900"
+                  >
+                    Registrar movimiento
+                  </button>
+                )}
+                {isTool && (
+                  <button
+                    onClick={() => setShowAddUnitModal(true)}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-brand-800 px-4 py-2 text-sm font-medium text-white hover:bg-brand-900"
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                    Agregar serial
+                  </button>
+                )}
                 <Link
                   to={`/inventory/${item.id}/edit`}
                   className="block w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-center text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -475,6 +668,277 @@ export default function ItemDetailPage() {
           )}
         </div>
       </div>
+
+      {showAddUnitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Agregar unidad (serial)</h3>
+              <button onClick={() => { setShowAddUnitModal(false); setNewUnitSerial('') }} className="text-gray-400 hover:text-gray-600">
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="mb-3 text-sm text-gray-600">
+              Registra una nueva unidad física con su número de serie. Quedará en estado "Disponible".
+            </p>
+            <div>
+              <label className="block text-xs font-medium text-gray-700">Número de serie *</label>
+              <input
+                type="text"
+                value={newUnitSerial}
+                onChange={(e) => setNewUnitSerial(e.target.value)}
+                placeholder="Ej: FL-12345"
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono"
+                autoFocus
+              />
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => { setShowAddUnitModal(false); setNewUnitSerial('') }}
+                className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleAddUnit}
+                className="rounded-md bg-brand-800 px-4 py-2 text-sm font-medium text-white hover:bg-brand-900"
+              >
+                Agregar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showStatusModal && editingUnit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Cambiar estado de {editingUnit.serial_number}
+              </h3>
+              <button onClick={() => { setShowStatusModal(false); setEditingUnit(null) }} className="text-gray-400 hover:text-gray-600">
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="mb-3 text-sm text-gray-600">
+              Estado actual: <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${unitStateStyle[editingUnit.status] || 'bg-gray-100'}`}>
+                {editingUnit.status_display}
+              </span>
+            </p>
+            <div className="space-y-2">
+              {[
+                { value: 'available', label: 'Disponible' },
+                { value: 'maintenance', label: 'En Reparación' },
+                { value: 'disposed', label: 'Descargado' },
+              ].map((opt) => (
+                <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="newStatus"
+                    value={opt.value}
+                    checked={newStatus === opt.value}
+                    onChange={() => setNewStatus(opt.value)}
+                    className="h-4 w-4 text-brand-800 focus:ring-brand-700"
+                  />
+                  <span className="text-sm text-gray-700">{opt.label}</span>
+                </label>
+              ))}
+            </div>
+            <div className="mt-4">
+              <label className="block text-xs font-medium text-gray-700">Motivo (opcional)</label>
+              <textarea
+                value={statusReason}
+                onChange={(e) => setStatusReason(e.target.value)}
+                rows={2}
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                placeholder="Ej: Calibración anual, Daño irreparable, etc."
+              />
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => { setShowStatusModal(false); setEditingUnit(null) }}
+                className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSetStatus}
+                className="rounded-md bg-brand-800 px-4 py-2 text-sm font-medium text-white hover:bg-brand-900"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showReceiveModal && receivingUnit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Recibir devolución: {receivingUnit.serial_number}
+              </h3>
+              <button onClick={() => { setShowReceiveModal(false); setReceivingUnit(null) }} className="text-gray-400 hover:text-gray-600">
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="mb-3 text-sm text-gray-600">
+              La unidad está actualmente asignada a:{' '}
+              <span className="font-medium text-gray-900">
+                {receivingUnit.active_loan?.recipient?.name || '—'}
+              </span>
+            </p>
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-gray-700 mb-1">Estado final de la unidad</label>
+              <div className="space-y-2">
+                {[
+                  { value: 'available', label: 'Disponible (vuelve al inventario)' },
+                  { value: 'maintenance', label: 'En Reparación' },
+                  { value: 'disposed', label: 'Descargado (baja definitiva)' },
+                ].map((opt) => (
+                  <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="finalStatus"
+                      value={opt.value}
+                      checked={finalStatus === opt.value}
+                      onChange={() => setFinalStatus(opt.value)}
+                      className="h-4 w-4 text-brand-800 focus:ring-brand-700"
+                    />
+                    <span className="text-sm text-gray-700">{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="mb-2">
+              <label className="block text-xs font-medium text-gray-700">
+                Motivo {finalStatus !== 'available' && <span className="text-red-600">*</span>}
+              </label>
+              <textarea
+                value={receiveNotes}
+                onChange={(e) => setReceiveNotes(e.target.value)}
+                rows={2}
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                placeholder={
+                  finalStatus === 'maintenance'
+                    ? 'Ej: Necesita calibración'
+                    : finalStatus === 'disposed'
+                    ? 'Ej: Daño irreparable, fuera de servicio'
+                    : 'Notas opcionales sobre la devolución'
+                }
+                required={finalStatus !== 'available'}
+              />
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => { setShowReceiveModal(false); setReceivingUnit(null) }}
+                className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleReceive}
+                className="rounded-md bg-brand-800 px-4 py-2 text-sm font-medium text-white hover:bg-brand-900"
+              >
+                Confirmar recepción
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function UnitsTab({ units, canEdit, onAddUnit, onChangeStatus }) {
+  if (units.length === 0) {
+    return (
+      <div className="text-center py-6">
+        <p className="text-sm text-gray-500 mb-3">No hay unidades registradas para este item.</p>
+        {canEdit && (
+          <button
+            onClick={onAddUnit}
+            className="inline-flex items-center gap-2 rounded-md bg-brand-800 px-4 py-2 text-sm font-medium text-white hover:bg-brand-900"
+          >
+            <PlusIcon className="h-4 w-4" />
+            Agregar primera unidad
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm text-gray-700">
+          <span className="font-medium">{units.length}</span> unidad(es) física(s) registrada(s)
+        </p>
+        {canEdit && (
+          <button
+            onClick={onAddUnit}
+            className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <PlusIcon className="h-4 w-4" />
+            Agregar
+          </button>
+        )}
+      </div>
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Serial</th>
+            <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Estado</th>
+            <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Asignado a</th>
+            <th className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500">Notas</th>
+            {canEdit && <th></th>}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-200">
+          {units.map((u) => (
+            <tr key={u.id} className="hover:bg-gray-50">
+              <td className="px-4 py-2 text-sm font-mono text-gray-900">{u.serial_number}</td>
+              <td className="px-4 py-2 text-sm">
+                <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${unitStateStyle[u.status] || 'bg-gray-100'}`}>
+                  {u.status_display}
+                </span>
+                {u.is_overdue && (
+                  <span className="ml-2 inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Vencido</span>
+                )}
+              </td>
+              <td className="px-4 py-2 text-sm text-gray-700">
+                {u.active_loan?.recipient?.name || '—'}
+              </td>
+              <td className="px-4 py-2 text-sm text-gray-600">{u.notes || u.disposal_reason || '—'}</td>
+              {canEdit && (
+                <td className="px-4 py-2 text-right">
+                  {u.status === 'asignado' ? (
+                    <button
+                      onClick={() => openReceiveModal(u)}
+                      className="inline-flex items-center gap-1 rounded-md bg-brand-800 px-2.5 py-1 text-xs font-medium text-white hover:bg-brand-900"
+                      title="Recibir devolución de la unidad"
+                    >
+                      <ArrowDownTrayIcon className="h-3.5 w-3.5" />
+                      Recibir
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => onChangeStatus(u, u.status)}
+                      className="inline-flex items-center gap-1 text-brand-700 hover:text-brand-900 text-sm"
+                      title="Cambiar estado"
+                    >
+                      <PencilSquareIcon className="h-4 w-4" />
+                      Cambiar
+                    </button>
+                  )}
+                </td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }

@@ -9,9 +9,11 @@
 |---|-------|------|--------------|------------------|
 | 1 | Foundation | Project scaffold, auth, audit middleware | AUTH-01..04, AUDIT-01 | 5 | ✅ |
 | 2 | Inventory Core | Component categories, stock entry, critical alerts | INV-01..06 | 6 | ✅ |
-| 3 | Work Orders | OT lifecycle, assignments, part requests, delivery note | OT-01..07 | 7 | ✅ |
-| 4 | Tool Custody | Tool registry, daily loans, returns, disposal | TOOL-01..05 | 5 | ✅ |
+| 3 | Work Orders (legacy) | OT lifecycle, assignments, part requests, delivery note | OT-01..07 | 7 | ✅ → reemplazado en Fase 7 |
+| 4 | Tool Custody (legacy) | Tool registry, daily loans, returns, disposal | TOOL-01..05 | 5 | ✅ → reemplazado en Fase 7 |
 | 5 | Security Hardening | Session timeout, HTTPS config, audit UI, immutability | AUTH-05, AUDIT-02..04 | 4 | ✅ |
+| 6 | Post-MVP Improvements | Reports, dashboard, search, audit history | (post-MVP) | 8 | ✅ |
+| 7 | Despacho + Unificación Tool→Item | Despacho inmediato atómico, herramientas como items con serial, modelo Solicitante | DSP-01..06 | 6 | ✅ |
 
 ---
 
@@ -45,33 +47,17 @@
 
 ---
 
-### Phase 3: Work Orders ✅
+### Phase 3: Work Orders (legacy) ✅ → reemplazado en Fase 7
 **Goal:** OT lifecycle from intake to closure with part consumption and printable delivery note.
-**Mode:** mvp
-**Requirements:** OT-01, OT-02, OT-03, OT-04, OT-05, OT-06, OT-07
-**Status:** Complete
-
-**Success Criteria:**
-1. ✅ OT number auto-generates uniquely (e.g., OT-2026-00001)
-2. ✅ Technician sees only assigned OTs and can update repair status
-3. ✅ Technician can request parts; inventory deducts only after Almacenista approval
-4. ✅ Every consumed part is linked to an active OT
-5. ✅ Closed OT generates a printable digital delivery note
+**Mode:** mvp (replaced)
+**Status:** Reemplazado en Fase 7 (Despacho inmediato atómico)
 
 ---
 
-### Phase 4: Tool Custody ✅
+### Phase 4: Tool Custody (legacy) ✅ → reemplazado en Fase 7
 **Goal:** Tool registry, daily loan/return flow, overdue alerts, and disposal.
-**Mode:** mvp
-**Requirements:** TOOL-01, TOOL-02, TOOL-03, TOOL-04, TOOL-05
-**Status:** Complete
-
-**Success Criteria:**
-1. ✅ Almacenista can register tools with code, type, brand, model, and serial
-2. ✅ Daily loan form assigns a tool to a technician at shift start
-3. ✅ Return form marks tool available again and records return time
-4. ✅ Loaned tools cannot be loaned again until returned
-5. ✅ Disposed tools remain visible in historical reports with reason and date
+**Mode:** mvp (replaced)
+**Status:** Reemplazado en Fase 7 (herramientas unificadas a Item + ItemUnit + ItemLoan)
 
 ---
 
@@ -86,6 +72,31 @@
 2. ✅ Audit log captures timestamp, IP, user, table, record id, and serialized changes
 3. ✅ Audit log UI is read-only for admin/Almacenista
 4. ✅ Production config enforces HTTPS and secure cookies
+
+---
+
+### Phase 7: Despacho + Unificación Tool → Item ✅
+**Goal:** Refactor del modelo de datos: la OT pasa a ser un vale de despacho de almacén inmediato y atómico. Las herramientas se tratan como items de inventario con unidades físicas serializadas. Se introduce el modelo Solicitante con autocomplete+create.
+**Mode:** refactor
+**Requirements:** DSP-01..06 (reemplaza OT-01..07 y TOOL-01..05)
+**Status:** Complete
+
+**Success Criteria:**
+1. ✅ Despacho con numeración `DV-YYYY-XXXXX` se genera y ejecuta atómicamente en un solo paso
+2. ✅ Almacenista selecciona items del stock (no texto libre); el sistema muestra nombre, tipo, stock y estado (OK/Crítico/Asignado)
+3. ✅ Herramientas serializadas se despachan eligiendo la unidad específica (ItemUnit); la unidad queda `Asignado` y se crea ItemLoan
+4. ✅ Solicitante es un modelo nuevo con autocomplete + create-inline desde el formulario de despacho
+5. ✅ Cancelación de despacho revierte `StockMovement.EXIT` y libera las unidades asignadas
+6. ✅ Reportes PDF/Excel actualizados con nuevas columnas; endpoints funcionan con la nueva ruta `/work-orders/despachos/`
+
+**Cambios clave del refactor:**
+- `WorkOrder → Despacho` (renombre, app sigue `workorders`)
+- `WorkOrderPart → LineaDespacho`
+- `Tool/ToolLoan → Item(kind='herramienta')/ItemUnit/ItemLoan`
+- App `tools/` eliminada (absorbida por `inventory/`)
+- 7 estados OT → 2 estados Despacho (`issued`/`cancelled`)
+- 11 acciones de taller → 1 acción `cancel`
+- 14 tests nuevos (39 totales pasando)
 
 ---
 

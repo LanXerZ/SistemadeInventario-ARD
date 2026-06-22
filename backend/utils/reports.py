@@ -50,7 +50,9 @@ def _build_excel_response(title, headers, rows):
     buffer = io.BytesIO()
     wb = Workbook()
     ws = wb.active
-    ws.title = title[:31]
+    # Excel no permite estos caracteres en el nombre del sheet
+    safe_title = title.replace('/', '-').replace('\\', '-').replace(':', '-').replace('*', '-').replace('?', '-').replace('[', '-').replace(']', '-')[:31]
+    ws.title = safe_title
 
     ws.merge_cells('A1:' + chr(64 + len(headers)) + '1')
     ws['A1'] = f"ARMADA DE REPÚBLICA DOMINICANA - Taller de Electrónica"

@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.validators import MinValueValidator
 from django.conf import settings
+from dirtyfields import DirtyFieldsMixin
 
 
 class Category(models.Model):
@@ -18,23 +19,47 @@ class Category(models.Model):
         return self.name
 
 
-class Location(models.Model):
-    class LocationType(models.TextChoices):
-        TALLER = 'taller', 'Taller de Electrónica'
-        BASE_NAVAL = 'base_naval', 'Base Naval'
-        UNIDAD_NAVAL = 'unidad_naval', 'Unidad Naval'
-        COMANDANCIA = 'comandancia', 'Comandancia / Capitanía'
-        DESTACAMENTO = 'destacamento', 'Destacamento / Puesto'
+class LocationType(models.Model):
+    """Tipo de ubicación (taller, base naval, unidad naval, etc.).
 
+    Gestionable desde la UI. Mantiene el catálogo flexible sin migraciones de modelo.
+    """
+
+    code = models.CharField(
+        max_length=30,
+        unique=True,
+        help_text='Código interno (e.g., "taller", "base_naval", "buque")',
+    )
+    name = models.CharField(
+        max_length=100,
+        help_text='Nombre visible (e.g., "Taller de Electrónica", "Buque")',
+    )
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'tipo de ubicación'
+        verbose_name_plural = 'tipos de ubicación'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class Location(models.Model):
     name = models.CharField(max_length=200)
     codigo = models.CharField(
         max_length=20,
         blank=True,
         help_text='Código interno de referencia (opcional)',
     )
-    location_type = models.CharField(
-        max_length=20,
-        choices=LocationType.choices,
+    location_type = models.ForeignKey(
+        LocationType,
+        on_delete=models.PROTECT,
+        related_name='locations',
+        help_text='Tipo de ubicación (taller, base naval, etc.)',
     )
     parent = models.ForeignKey(
         'self',
@@ -49,10 +74,11 @@ class Location(models.Model):
     class Meta:
         verbose_name = 'ubicación'
         verbose_name_plural = 'ubicaciones'
-        ordering = ['location_type', 'name']
+        ordering = ['location_type__name', 'name']
 
     def __str__(self):
-        return f"{self.get_location_type_display()} - {self.name}"
+        type_name = self.location_type.name if self.location_type else 'Sin tipo'
+        return f"{type_name} - {self.name}"
 
     def get_breadcrumb(self):
         parts = [self.name]
@@ -63,13 +89,17 @@ class Location(models.Model):
         return ' > '.join(parts)
 
 
-class Item(models.Model):
+class Item(DirtyFieldsMixin, models.Model):
     class DocumentType(models.TextChoices):
         OFICIO = 'oficio', 'Oficio'
         CONDUCE = 'conduce', 'Conduce'
         FACTURA = 'factura', 'Factura'
         DIRECTO = 'directo', 'Directo'
         LEGADO = 'legado', 'Legado'
+
+    class Kind(models.TextChoices):
+        CONSUMIBLE = 'consumible', 'Consumible / Repuesto'
+        HERRAMIENTA = 'herramienta', 'Herramienta / Instrumento'
 
     name = models.CharField(max_length=200)
     code = models.CharField(
@@ -123,6 +153,16 @@ class Item(models.Model):
     quantity = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0)])
     minimum_stock = models.PositiveIntegerField(default=0)
     unit = models.CharField(max_length=50, default='unidad')
+    kind = models.CharField(
+        max_length=20,
+        choices=Kind.choices,
+        default=Kind.CONSUMIBLE,
+        help_text='Consumible (se descuenta de quantity) o herramienta (se rastrea por ItemUnit con serial)',
+    )
+    track_by_serial = models.BooleanField(
+        default=False,
+        help_text='Si True, el stock se cuenta por unidades físicas con serial (ItemUnit). Solo aplica a kind=herramienta.',
+    )
     image = models.ImageField(upload_to='items/%Y/%m/', blank=True, null=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -140,8 +180,21 @@ class Item(models.Model):
     def is_critical(self):
         return self.minimum_stock > 0 and self.quantity <= self.minimum_stock
 
+    @property
+    def stock_available(self):
+        """Stock disponible: usa quantity para consumibles, count(units available) para herramientas serializadas."""
+        if self.track_by_serial:
+            return self.units.filter(status=ItemUnit.Status.AVAILABLE).count()
+        return self.quantity
 
-class StockMovement(models.Model):
+    @property
+    def stock_asignado(self):
+        if self.track_by_serial:
+            return self.units.filter(status=ItemUnit.Status.ASIGNADO).count()
+        return 0
+
+
+class StockMovement(DirtyFieldsMixin, models.Model):
     class MovementType(models.TextChoices):
         ENTRY = 'entry', 'Entrada'
         EXIT = 'exit', 'Salida'
@@ -189,7 +242,7 @@ class StockMovement(models.Model):
         return f"{self.get_movement_type_display()} {self.quantity} x {self.item.name}"
 
 
-class Transfer(models.Model):
+class Transfer(DirtyFieldsMixin, models.Model):
     class Status(models.TextChoices):
         PENDIENTE = 'pendiente', 'Pendiente'
         EN_TRANSITO = 'en_transito', 'En tránsito'
@@ -261,3 +314,156 @@ class Transfer(models.Model):
     def __str__(self):
         origin = self.origin_location.name if self.origin_location else 'Inicial'
         return f"{self.item.name}: {origin} → {self.destination_location.name}"
+
+
+class ItemUnit(DirtyFieldsMixin, models.Model):
+    """Unidad física individual de un item con serial (e.g., Multímetro SN-12345).
+
+    Solo aplica a items con track_by_serial=True (típicamente herramientas).
+    """
+
+    class Status(models.TextChoices):
+        AVAILABLE = 'available', 'Disponible'
+        ASIGNADO = 'asignado', 'Asignado'
+        MAINTENANCE = 'maintenance', 'En Reparación'
+        DISPOSED = 'disposed', 'Descargado'
+
+    item = models.ForeignKey(
+        Item,
+        on_delete=models.CASCADE,
+        related_name='units',
+    )
+    serial_number = models.CharField(
+        max_length=100,
+        help_text='Número de serie físico de la unidad',
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.AVAILABLE,
+    )
+    notes = models.TextField(blank=True)
+    acquired_at = models.DateTimeField(auto_now_add=True)
+    disposed_at = models.DateTimeField(null=True, blank=True)
+    disposal_reason = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name = 'unidad física'
+        verbose_name_plural = 'unidades físicas'
+        ordering = ['item', 'serial_number']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['item', 'serial_number'],
+                name='unique_item_unit_serial',
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.item.name} [{self.serial_number}]"
+
+    def dispose(self, reason=''):
+        from django.utils import timezone
+        if self.status == self.Status.DISPOSED:
+            raise ValueError('Esta unidad ya está dada de baja.')
+        if self.status == self.Status.ASIGNADO:
+            raise ValueError('No se puede dar de baja una unidad actualmente asignada. Devuélvala primero.')
+        self.status = self.Status.DISPOSED
+        self.disposed_at = timezone.now()
+        if reason:
+            self.disposal_reason = reason
+        self.save()
+
+    def assign(self, user_session):
+        if self.status != self.Status.AVAILABLE:
+            raise ValueError(f'Solo se pueden asignar unidades disponibles (estado actual: {self.status}).')
+        self.status = self.Status.ASIGNADO
+        self.save()
+
+    def return_to_stock(self):
+        if self.status != self.Status.ASIGNADO:
+            raise ValueError(f'Solo se pueden devolver unidades asignadas (estado actual: {self.status}).')
+        self.status = self.Status.AVAILABLE
+        self.save()
+
+
+class ItemLoan(DirtyFieldsMixin, models.Model):
+    """Préstamo de una unidad física (ItemUnit) a un solicitante.
+
+    El stock NO se descuenta de Item.quantity (las herramientas se prestan, no se consumen).
+    Al prestarse, ItemUnit.status pasa a ASIGNADO. Al devolverse, vuelve a AVAILABLE.
+    """
+
+    item_unit = models.ForeignKey(
+        ItemUnit,
+        on_delete=models.PROTECT,
+        related_name='loans',
+    )
+    loaned_to = models.ForeignKey(
+        'workorders.Solicitante',
+        on_delete=models.PROTECT,
+        related_name='tool_loans',
+        null=True,
+        blank=True,
+        help_text='Persona/unidad que recibe la herramienta',
+    )
+    loaned_to_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='item_loans',
+        null=True,
+        blank=True,
+        help_text='Usuario del sistema que recibe (técnico del taller)',
+    )
+    loaned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='item_loans_approved',
+    )
+    loaned_at = models.DateTimeField(auto_now_add=True)
+    expected_return_at = models.DateTimeField()
+    returned_at = models.DateTimeField(null=True, blank=True)
+    returned_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='item_loans_received',
+        null=True,
+        blank=True,
+    )
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name = 'préstamo de unidad'
+        verbose_name_plural = 'préstamos de unidades'
+        ordering = ['-loaned_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['item_unit'],
+                condition=models.Q(returned_at__isnull=True),
+                name='unique_active_loan_per_unit',
+            ),
+        ]
+
+    def __str__(self):
+        recipient = self.loaned_to.name if self.loaned_to else (self.loaned_to_user.name if self.loaned_to_user else '?')
+        return f"{self.item_unit} → {recipient}"
+
+    def is_overdue(self):
+        from django.utils import timezone
+        if self.returned_at:
+            return False
+        return timezone.now() > self.expected_return_at
+
+    def return_unit(self, user):
+        from django.utils import timezone
+        if self.returned_at:
+            raise ValueError('Esta unidad ya fue devuelta.')
+        self.returned_at = timezone.now()
+        self.returned_to = user
+        self.save()
+        self.item_unit.return_to_stock()
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+        if is_new:
+            self.item_unit.assign(user_session=self.loaned_by)
